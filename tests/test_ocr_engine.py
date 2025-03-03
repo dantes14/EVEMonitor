@@ -22,28 +22,32 @@ from src.config.config_manager import ConfigManager
 @pytest.fixture
 def config_manager(tmp_path):
     """创建配置管理器实例"""
-    config_path = tmp_path / "test_config.yaml"
+    config_path = tmp_path / "test_config.json"
     config_manager = ConfigManager(config_path)
     # 设置默认配置
-    config_manager.set_config("ocr", {
-        "engine": "paddleocr",
-        "language": "ch",
-        "confidence_threshold": 0.6,
-        "use_gpu": False,
-        "num_threads": 4,
-        "batch_size": 1,
-        "paddle": {
-            "model_dir": "",
-            "use_det": True,
-            "use_cls": True,
-            "use_server_mode": False
-        },
-        "tesseract": {
-            "executable_path": "",
-            "tessdata_dir": "",
-            "config": ""
-        }
-    })
+    config_manager.set_config("ocr.engine", "paddle")
+    config_manager.set_config("ocr.language", "ch")
+    config_manager.set_config("ocr.confidence_threshold", 0.6)
+    
+    # 配置Paddle相关设置
+    config_manager.set_config("ocr.paddle.use_gpu", False)
+    config_manager.set_config("ocr.paddle.use_det", True)
+    config_manager.set_config("ocr.paddle.use_cls", True)
+    config_manager.set_config("ocr.paddle.use_server_mode", False)
+    config_manager.set_config("ocr.paddle.model_dir", "")
+    
+    # 配置Tesseract相关设置
+    if sys.platform == 'win32':
+        tesseract_path = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+        if os.path.exists(tesseract_path):
+            config_manager.set_config("ocr.tesseract.executable_path", tesseract_path)
+        tessdata_path = r'C:\Program Files\Tesseract-OCR\tessdata'
+        if os.path.exists(tessdata_path):
+            config_manager.set_config("ocr.tesseract.tessdata_dir", tessdata_path)
+    else:
+        config_manager.set_config("ocr.tesseract.executable_path", "")
+        config_manager.set_config("ocr.tesseract.tessdata_dir", "")
+    
     return config_manager
 
 
@@ -71,22 +75,21 @@ def test_config_update(ocr_engine, config_manager):
     """测试配置更新"""
     # 更新配置
     config_manager.set_config("ocr.engine", "tesseract")
-    config_manager.set_config("ocr.language", "en")
+    config_manager.set_config("ocr.language", "eng")
     config_manager.set_config("ocr.confidence_threshold", 0.8)
-    config_manager.set_config("ocr.use_gpu", True)
-    config_manager.set_config("ocr.num_threads", 8)
-    config_manager.set_config("ocr.batch_size", 2)
+    
+    # 配置Tesseract特定参数
+    tesseract_path = r'C:\Program Files\Tesseract-OCR\tesseract.exe' if sys.platform == 'win32' else "/usr/bin/tesseract"
+    if os.path.exists(tesseract_path):
+        config_manager.set_config("ocr.tesseract.executable_path", tesseract_path)
     
     # 更新引擎配置
     ocr_engine.update_config()
     
     # 验证更新
     assert ocr_engine.engine_type == "tesseract"
-    assert ocr_engine.language == "en"
+    assert ocr_engine.language == "eng"
     assert ocr_engine.confidence_threshold == 0.8
-    assert ocr_engine.use_gpu is True
-    assert ocr_engine.num_threads == 8
-    assert ocr_engine.batch_size == 2
 
 
 def test_recognize_with_tesseract(ocr_engine, config_manager):

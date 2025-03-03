@@ -78,7 +78,7 @@ class OCREngine:
             if not paddle_available:
                 logger.warning("PaddleOCR不可用，自动切换到Tesseract")
                 self.engine_type = "tesseract"
-                self.config_manager.update_config("ocr.engine", "tesseract")
+                self.config_manager.set_config("ocr.engine", "tesseract")
             else:
                 try:
                     # 获取PaddleOCR配置
@@ -99,7 +99,7 @@ class OCREngine:
                     logger.error(f"PaddleOCR引擎初始化失败: {e}")
                     logger.warning("自动切换到Tesseract")
                     self.engine_type = "tesseract"
-                    self.config_manager.update_config("ocr.engine", "tesseract")
+                    self.config_manager.set_config("ocr.engine", "tesseract")
         
         if self.engine_type == "tesseract":
             if not tesseract_available:
@@ -115,18 +115,30 @@ class OCREngine:
                 tesseract_path = tesseract_config.get("executable_path", "")
                 if tesseract_path and os.path.exists(tesseract_path):
                     pytesseract.pytesseract.tesseract_cmd = tesseract_path
+                    logger.info(f"已设置Tesseract路径: {tesseract_path}")
                 else:
                     # 尝试默认安装路径
                     default_path = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
                     if os.path.exists(default_path):
                         pytesseract.pytesseract.tesseract_cmd = default_path
+                        logger.info(f"使用默认Tesseract路径: {default_path}")
+                        # 更新配置
+                        self.config_manager.set_config("ocr.tesseract.executable_path", default_path)
                     else:
-                        logger.warning("未找到Tesseract路径，请设置TESSERACT_PATH环境变量")
+                        logger.warning("未找到Tesseract路径，请设置Tesseract路径")
+                        # 检查环境变量
+                        tesseract_env = os.environ.get("TESSERACT_PATH", "")
+                        if tesseract_env and os.path.exists(tesseract_env):
+                            pytesseract.pytesseract.tesseract_cmd = tesseract_env
+                            logger.info(f"从环境变量设置Tesseract路径: {tesseract_env}")
+                            # 更新配置
+                            self.config_manager.set_config("ocr.tesseract.executable_path", tesseract_env)
             
             # 设置Tesseract数据目录
             tessdata_dir = tesseract_config.get("tessdata_dir", "")
             if tessdata_dir and os.path.exists(tessdata_dir):
                 os.environ['TESSDATA_PREFIX'] = tessdata_dir
+                logger.info(f"已设置Tesseract数据目录: {tessdata_dir}")
             
             logger.info("Tesseract OCR引擎已准备就绪")
         
@@ -134,7 +146,7 @@ class OCREngine:
             logger.error(f"不支持的OCR引擎类型: {self.engine_type}")
             logger.warning("自动切换到Tesseract")
             self.engine_type = "tesseract"
-            self.config_manager.update_config("ocr.engine", "tesseract")
+            self.config_manager.set_config("ocr.engine", "tesseract")
             self._init_engine()  # 重新初始化Tesseract
     
     def start_ocr(self) -> bool:
@@ -496,17 +508,30 @@ class OCREngine:
             logger.error(f"Tesseract识别失败: {e}")
             return []
     
-    def update_config(self) -> None:
-        """更新配置"""
+    def update_config(self):
+        """
+        更新OCR引擎配置
+        """
+        logger.debug("更新OCR引擎配置")
+        
+        # 从配置管理器获取最新配置
+        config = self.config_manager.get_config()
+        
         # 更新OCR引擎配置
-        self.engine_type = self.config_manager.get_config().get("ocr", {}).get("engine", "tesseract")
-        self.language = self.config_manager.get_config().get("ocr", {}).get("language", "zh")
-        self.confidence_threshold = self.config_manager.get_config().get("ocr", {}).get("confidence_threshold", 0.6)
-        self.use_gpu = self.config_manager.get_config().get("ocr", {}).get("use_gpu", False)
-        self.num_threads = self.config_manager.get_config().get("ocr", {}).get("num_threads", 4)
-        self.batch_size = self.config_manager.get_config().get("ocr", {}).get("batch_size", 1)
+        self.engine_type = config.get("ocr.engine", "paddle")
+        self.language = config.get("ocr.language", "ch")
+        self.confidence_threshold = float(config.get("ocr.confidence_threshold", 0.6))
+        
+        # 获取引擎特定配置
+        if self.engine_type == "paddle":
+            paddle_config = config.get("ocr.paddle", {})
+            self.use_gpu = paddle_config.get("use_gpu", False)
+            # 其他PaddleOCR特定配置...
+        elif self.engine_type == "tesseract":
+            # Tesseract特定配置...
+            pass
         
         # 重新初始化引擎
         self._init_engine()
         
-        logger.debug("OCR引擎配置已更新") 
+        logger.debug(f"OCR引擎配置已更新: {self.engine_type}, {self.language}, {self.confidence_threshold}") 

@@ -165,23 +165,24 @@ class NotificationManager:
         except Exception as e:
             logger.error(f"播放声音失败: {e}")
     
-    def update_config(self, config: Dict[str, Any]):
+    def update_config(self):
         """
-        更新配置
-        
-        参数:
-            config: 新的配置
+        更新通知管理器配置
         """
         try:
-            self.config = config
+            # 从配置管理器获取最新配置
+            config = self.config_manager.get_config()
+            
+            # 更新通知配置
+            self.enabled = config.get("notification.enabled", True)
+            self.sound_enabled = config.get("notification.sound_enabled", True)
+            self.desktop_enabled = config.get("notification.desktop_enabled", True)
+            self.tray_enabled = config.get("notification.tray_enabled", True)
+            self.sound_file = config.get("notification.sound_file", "")
             
             # 更新托盘图标
-            if self.tray_icon:
-                # TODO: 更新图标
-                pass
+            # TODO: 实现托盘图标更新
             
             logger.debug("通知管理器配置已更新")
-            
         except Exception as e:
-            logger.error(f"更新通知管理器配置失败: {e}")
-            raise 
+            logger.error(f"更新通知配置失败: {e}") 

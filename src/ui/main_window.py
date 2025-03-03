@@ -229,7 +229,7 @@ class MainWindow(QMainWindow):
         self.capture_interval_spin.setValue(self.config.get("timing", {}).get("capture_interval_ms", 2000))
         self.capture_interval_spin.setSuffix(" 毫秒")
         self.capture_interval_spin.valueChanged.connect(
-            lambda v: self.config_manager.update_config("timing.capture_interval_ms", v)
+            lambda value: self.config_manager.set_config("timing.capture_interval_ms", value)
         )
         timing_layout.addRow("截图间隔:", self.capture_interval_spin)
         
@@ -239,7 +239,7 @@ class MainWindow(QMainWindow):
         self.processing_timeout_spin.setValue(self.config.get("timing", {}).get("processing_timeout_ms", 5000))
         self.processing_timeout_spin.setSuffix(" 毫秒")
         self.processing_timeout_spin.valueChanged.connect(
-            lambda v: self.config_manager.update_config("timing.processing_timeout_ms", v)
+            lambda value: self.config_manager.set_config("timing.processing_timeout_ms", value)
         )
         timing_layout.addRow("处理超时:", self.processing_timeout_spin)
         
@@ -247,7 +247,7 @@ class MainWindow(QMainWindow):
         self.queue_max_size_spin.setRange(1, 100)
         self.queue_max_size_spin.setValue(self.config.get("timing", {}).get("queue_max_size", 10))
         self.queue_max_size_spin.valueChanged.connect(
-            lambda v: self.config_manager.update_config("timing.queue_max_size", v)
+            lambda value: self.config_manager.set_config("timing.queue_max_size", value)
         )
         timing_layout.addRow("队列容量:", self.queue_max_size_spin)
         
@@ -257,19 +257,19 @@ class MainWindow(QMainWindow):
         debug_group = QGroupBox("调试设置")
         debug_layout = QFormLayout(debug_group)
         
-        self.debug_enabled_check = QCheckBox("启用调试模式")
-        self.debug_enabled_check.setChecked(self.config.get("debug", {}).get("enabled", False))
-        self.debug_enabled_check.toggled.connect(
-            lambda v: self.config_manager.update_config("debug.enabled", v)
+        self.debug_enabled_checkbox = QCheckBox("启用调试模式")
+        self.debug_enabled_checkbox.setChecked(self.config.get("debug", {}).get("enabled", False))
+        self.debug_enabled_checkbox.stateChanged.connect(
+            lambda state: self.config_manager.set_config("debug.enabled", state == Qt.CheckState.Checked)
         )
-        debug_layout.addRow("", self.debug_enabled_check)
+        debug_layout.addRow("", self.debug_enabled_checkbox)
         
-        self.save_screenshots_check = QCheckBox("保存截图")
-        self.save_screenshots_check.setChecked(self.config.get("debug", {}).get("save_screenshots", False))
-        self.save_screenshots_check.toggled.connect(
-            lambda v: self.config_manager.update_config("debug.save_screenshots", v)
+        self.save_screenshots_checkbox = QCheckBox("保存截图")
+        self.save_screenshots_checkbox.setChecked(self.config.get("debug", {}).get("save_screenshots", False))
+        self.save_screenshots_checkbox.stateChanged.connect(
+            lambda state: self.config_manager.set_config("debug.save_screenshots", state == Qt.CheckState.Checked)
         )
-        debug_layout.addRow("", self.save_screenshots_check)
+        debug_layout.addRow("", self.save_screenshots_checkbox)
         
         self.log_level_combo = QComboBox()
         self.log_level_combo.addItems(["DEBUG", "INFO", "WARNING", "ERROR"])
@@ -285,25 +285,25 @@ class MainWindow(QMainWindow):
         ui_group = QGroupBox("界面设置")
         ui_layout = QFormLayout(ui_group)
         
-        self.minimize_to_tray_check = QCheckBox("最小化到托盘")
-        self.minimize_to_tray_check.setChecked(self.config.get("ui", {}).get("minimize_to_tray", True))
-        self.minimize_to_tray_check.toggled.connect(
-            lambda v: self.config_manager.update_config("ui.minimize_to_tray", v)
+        self.minimize_to_tray_checkbox = QCheckBox("最小化到托盘")
+        self.minimize_to_tray_checkbox.setChecked(self.config.get("ui", {}).get("minimize_to_tray", True))
+        self.minimize_to_tray_checkbox.stateChanged.connect(
+            lambda state: self.config_manager.set_config("ui.minimize_to_tray", state == Qt.CheckState.Checked)
         )
-        ui_layout.addRow("", self.minimize_to_tray_check)
+        ui_layout.addRow("", self.minimize_to_tray_checkbox)
         
-        self.start_minimized_check = QCheckBox("启动时最小化")
-        self.start_minimized_check.setChecked(self.config.get("ui", {}).get("start_minimized", False))
-        self.start_minimized_check.toggled.connect(
-            lambda v: self.config_manager.update_config("ui.start_minimized", v)
+        self.start_minimized_checkbox = QCheckBox("启动时最小化")
+        self.start_minimized_checkbox.setChecked(self.config.get("ui", {}).get("start_minimized", False))
+        self.start_minimized_checkbox.stateChanged.connect(
+            lambda state: self.config_manager.set_config("ui.start_minimized", state == Qt.CheckState.Checked)
         )
-        ui_layout.addRow("", self.start_minimized_check)
+        ui_layout.addRow("", self.start_minimized_checkbox)
         
         self.language_combo = QComboBox()
         self.language_combo.addItems(["zh_CN", "en_US"])
         self.language_combo.setCurrentText(self.config.get("ui", {}).get("language", "zh_CN"))
         self.language_combo.currentTextChanged.connect(
-            lambda v: self.config_manager.update_config("ui.language", v)
+            lambda text: self.config_manager.set_config("ui.language", text)
         )
         ui_layout.addRow("界面语言:", self.language_combo)
         
@@ -311,7 +311,7 @@ class MainWindow(QMainWindow):
         self.theme_combo.addItems(["light", "dark", "system"])
         self.theme_combo.setCurrentText(self.config.get("ui", {}).get("theme", "dark"))
         self.theme_combo.currentTextChanged.connect(
-            lambda v: self.config_manager.update_config("ui.theme", v)
+            lambda text: self.config_manager.set_config("ui.theme", text)
         )
         ui_layout.addRow("界面主题:", self.theme_combo)
         

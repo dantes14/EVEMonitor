@@ -500,18 +500,28 @@ class ScreenCapture:
         
         return str(file_path)
     
-    def update_config(self) -> None:
-        """更新配置"""
+    def update_config(self):
+        """
+        更新屏幕捕获配置
+        """
+        # 从配置管理器获取最新配置
+        config = self.config_manager.get_config()
+        
         # 更新截图路径
-        self.screenshot_path = Path(self.config_manager.get_config().get("app", {}).get("paths", {}).get("screenshots", "./screenshots"))
-        self.screenshot_path.mkdir(exist_ok=True)
+        self.screenshot_path = os.path.join(
+            config.get("paths.screenshots", os.path.join(os.getcwd(), "screenshots")),
+            datetime.now().strftime("%Y%m%d")
+        )
         
         # 更新捕获参数
-        self.capture_interval = self.config_manager.get_config().get("monitor", {}).get("capture", {}).get("interval", 2.0)
-        self.capture_quality = self.config_manager.get_config().get("monitor", {}).get("capture", {}).get("quality", 80)
-        self.capture_method = self.config_manager.get_config().get("monitor", {}).get("capture", {}).get("method", "window")
+        self.capture_interval = float(config.get("timing.capture_interval_ms", 2000)) / 1000.0
+        self.capture_quality = int(config.get("capture.quality", 80))
+        self.capture_method = config.get("capture.method", "window")
         
-        logger.debug("屏幕捕获器配置已更新")
+        # 确保截图目录存在
+        os.makedirs(self.screenshot_path, exist_ok=True)
+        
+        logger.debug(f"屏幕捕获配置已更新: 间隔={self.capture_interval}秒, 质量={self.capture_quality}, 方法={self.capture_method}")
     
     def capture(self, region: Optional[Dict[str, int]] = None) -> Optional[QImage]:
         """

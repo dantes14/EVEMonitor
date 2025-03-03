@@ -92,29 +92,48 @@ python main.py --config /path/to/your/config.yaml
 
 ### 1. 安装Python
 
-1. 从[Python官网](https://www.python.org/downloads/windows/)下载最新版Python安装程序
+1. 从[Python官网](https://www.python.org/downloads/windows/)下载最新版Python安装程序（推荐3.8或更高版本）
 2. 运行安装程序，**务必勾选"Add Python to PATH"选项**
 3. 完成安装并验证：
    ```cmd
    python --version
    ```
 
-### 2. 安装Tesseract OCR引擎
+### 2. 安装OCR引擎（两种选择）
+
+#### 选项A：使用程序自动安装（推荐）
+
+EVE监视器现在支持在首次启动时自动安装Tesseract OCR。您只需：
+
+1. 安装Python和项目依赖
+2. 启动EVE监视器
+3. 当看到"未找到Tesseract OCR引擎"提示时，选择"是"自动下载安装
+
+#### 选项B：手动安装Tesseract
+
+如果您希望手动安装Tesseract OCR：
 
 1. 从[GitHub](https://github.com/UB-Mannheim/tesseract/wiki)下载Tesseract安装程序
 2. 运行安装程序，推荐安装到默认路径（如`C:\Program Files\Tesseract-OCR`）
-3. 添加Tesseract到环境变量：
-   - 右键"此电脑" > "属性" > "高级系统设置" > "环境变量"
-   - 在"系统变量"中找到"Path"，点击"编辑"
-   - 点击"新建"，添加Tesseract安装路径（如`C:\Program Files\Tesseract-OCR`）
-   - 点击"确定"保存更改
-4. 创建TESSERACT_PATH环境变量：
-   - 在"系统变量"中点击"新建"
-   - 变量名输入`TESSERACT_PATH`
-   - 变量值输入Tesseract可执行文件路径（如`C:\Program Files\Tesseract-OCR\tesseract.exe`）
-   - 点击"确定"保存
+3. 安装过程中确保选择安装中文语言包（在"Additional language data"中选择"Chinese (Simplified)"）
+4. 安装完成后，EVE监视器会自动检测默认路径下的Tesseract
 
-### 3. 下载EVE监视器
+（可选）手动设置环境变量：
+- 右键"此电脑" > "属性" > "高级系统设置" > "环境变量"
+- 在"系统变量"中点击"新建"
+- 变量名输入`TESSERACT_PATH`
+- 变量值输入Tesseract可执行文件路径（如`C:\Program Files\Tesseract-OCR\tesseract.exe`）
+- 点击"确定"保存
+
+### 3. 安装PaddleOCR（可选，推荐）
+
+EVE监视器在Windows上支持PaddleOCR，它比Tesseract提供更好的中文识别效果：
+
+1. 确保已安装CUDA（如需GPU加速）
+2. 安装项目依赖时，确保取消注释requirements.txt中的PaddleOCR相关依赖
+3. EVE监视器会自动检测并优先使用PaddleOCR
+
+### 4. 下载EVE监视器
 
 ```cmd
 # 克隆仓库（需要安装Git）
@@ -125,7 +144,7 @@ cd EVEMonitor
 # 然后在命令提示符中进入解压目录
 ```
 
-### 4. 创建虚拟环境并安装依赖
+### 5. 创建虚拟环境并安装依赖
 
 ```cmd
 # 创建虚拟环境
@@ -141,7 +160,7 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### 5. 启动应用程序
+### 6. 启动应用程序
 
 ```cmd
 # 确保在EVEMonitor目录下
@@ -156,12 +175,102 @@ python main.py --config D:\path\to\your\config.yaml
 
 ## 配置说明
 
-EVE监视器使用YAML格式的配置文件，默认位于`config/config.yaml`。您可以通过以下方式修改配置：
+EVE监视器使用JSON格式的配置文件，默认位于`config/config.json`。您可以通过以下方式修改配置：
 
-1. **直接编辑配置文件**：使用文本编辑器修改`config.yaml`
+1. **直接编辑配置文件**：使用文本编辑器修改`config.json`
 2. **通过应用程序界面**：在应用程序中修改设置，修改会自动保存
 
-主要配置项包括：
+### 主要配置项
+
+#### OCR引擎配置
+
+EVE监视器支持两种OCR引擎：
+
+```json
+"ocr": {
+    "engine": "paddle",  // 可选值："paddle" 或 "tesseract"
+    "language": "ch",    // 语言：ch（中文）, eng（英文）等
+    "confidence_threshold": 0.6,
+    "tesseract": {
+        "executable_path": "C:\\Program Files\\Tesseract-OCR\\tesseract.exe",
+        "tessdata_dir": "C:\\Program Files\\Tesseract-OCR\\tessdata"
+    },
+    "paddle": {
+        "use_gpu": false,
+        "use_cls": true,
+        "use_det": true,
+        "use_server_mode": false,
+        "model_dir": ""
+    }
+}
+```
+
+#### 模拟器设置
+
+配置EVE Online客户端窗口标题和监控区域：
+
+```json
+"screen": {
+    "monitor_mode": "window",  // window：窗口模式，screen：全屏模式
+    "capture_method": "window",  // window：窗口截图，screen：屏幕截图
+    "simulators": [
+        {
+            "title": "EVE Online",   // 模拟器窗口标题
+            "enabled": true,         // 是否启用
+            "regions": {
+                "ship_status": {     // 舰船状态区域
+                    "x": 10,
+                    "y": 10,
+                    "width": 200,
+                    "height": 50
+                },
+                "target": {          // 目标区域
+                    "x": 300,
+                    "y": 10,
+                    "width": 200,
+                    "height": 300
+                },
+                "chat": {            // 聊天区域
+                    "x": 10,
+                    "y": 400,
+                    "width": 300,
+                    "height": 200
+                },
+                "system": {          // 系统信息区域
+                    "x": 800,
+                    "y": 10,
+                    "width": 200,
+                    "height": 30
+                }
+            }
+        }
+    ]
+}
+```
+
+#### 调试配置
+
+```json
+"debug": {
+    "enabled": false,            // 是否启用调试模式
+    "save_screenshots": false,   // 是否保存截图
+    "save_images": false,        // 是否保存处理后的图像
+    "log_level": "info"          // 日志级别：debug, info, warning, error
+}
+```
+
+#### 通知配置
+
+```json
+"notification": {
+    "enabled": true,
+    "cooldown": 60,  // 通知冷却时间（秒）
+    "sound_enabled": true,
+    "desktop_enabled": true,
+    "tray_enabled": true,
+    "sound_file": "path/to/sound.wav"
+}
+```
 
 - **模拟器设置**：设置EVE Online客户端窗口标题和监控区域
 - **OCR设置**：确保OCR引擎设置为Tesseract并配置语言
@@ -201,7 +310,62 @@ EVE监视器使用YAML格式的配置文件，默认位于`config/config.yaml`�
 
 ## 常见问题
 
-### 1. OCR识别不准确
+### Windows环境常见问题
+
+#### 1. "未找到Tesseract路径"错误
+
+**问题描述**: 程序启动时提示"未找到Tesseract路径，请设置Tesseract路径"
+
+**解决方案**:
+- 选择"是"让程序自动下载并安装Tesseract
+- 或手动安装Tesseract，确保安装到默认路径 `C:\Program Files\Tesseract-OCR\`
+- 或在OCR设置界面中手动设置Tesseract可执行文件路径
+
+#### 2. 无法识别游戏中的文字
+
+**问题描述**: OCR功能无法正确识别游戏中的文字
+
+**解决方案**:
+- 确保安装了正确的语言包（中文游戏需要安装简体中文语言包）
+- 调整OCR设置中的置信度阈值（较低的值可能识别出更多文字，但准确性降低）
+- 尝试使用PaddleOCR引擎，它通常对中文的识别效果更好
+- 调整监控区域，确保只包含需要识别的文字区域
+
+#### 3. PaddleOCR安装问题
+
+**问题描述**: 无法成功安装PaddleOCR
+
+**解决方案**:
+- 确保使用Python 3.8或3.9版本（PaddleOCR对Python版本有特定要求）
+- 如果安装过程中出现CUDA相关错误，可以尝试安装CPU版本：
+  ```
+  pip install paddlepaddle
+  ```
+- 如果安装后仍无法使用，程序会自动降级到Tesseract引擎
+
+#### 4. 截图功能无法正常工作
+
+**问题描述**: 无法正确捕获游戏窗口或截图黑屏
+
+**解决方案**:
+- 确保游戏运行在窗口模式而非全屏模式
+- 尝试以管理员身份运行EVE监视器
+- 在设置中尝试不同的截图方法（窗口截图vs屏幕截图）
+- 如果使用多显示器，确保游戏窗口在主显示器上
+
+#### 5. 程序崩溃或无响应
+
+**问题描述**: 程序意外退出或界面无响应
+
+**解决方案**:
+- 检查日志文件（默认在logs目录下）了解错误详情
+- 降低截图频率（在设置中增加捕获间隔）
+- 减少监控的区域数量
+- 关闭不必要的功能，如调试模式或保存截图功能
+
+### Mac环境常见问题
+
+#### 1. OCR识别不准确
 
 **解决方案**：
 - 调整监控区域，确保只包含需要识别的文本
@@ -214,46 +378,37 @@ EVE监视器使用YAML格式的配置文件，默认位于`config/config.yaml`�
       tesseract_config: "--psm 6"  # 调整页面分割模式
   ```
 
-### 2. 找不到窗口
+#### 2. 找不到窗口
 
 **解决方案**：
 - 确保配置的窗口标题与EVE客户端窗口标题完全匹配
 - 尝试使用部分匹配模式（在设置中启用"窗口标题部分匹配"）
 - 确保EVE客户端处于前台或可见状态
 
-### 3. Mac权限问题
+#### 3. Mac权限问题
 
 **解决方案**：
 - 确保已授予屏幕录制权限
 - 重启应用程序和/或重新登录系统
 - 在"系统偏好设置"中检查是否已为Python或应用程序授予必要权限
 
-### 4. Windows找不到Tesseract
+### 依赖项问题
 
-**解决方案**：
-- 确保正确安装了Tesseract OCR
-- 验证环境变量TESSERACT_PATH设置正确
-- 尝试在配置文件中手动指定Tesseract路径：
-  ```yaml
-  monitor:
-    ocr:
-      engine: "tesseract"
-      tesseract_path: "C:\\Program Files\\Tesseract-OCR\\tesseract.exe"
-  ```
+#### PaddleOCR在Windows上的配置
 
-### 5. 应用程序崩溃
+Windows环境中，EVE监视器默认使用PaddleOCR引擎，它提供比Tesseract更好的中文识别效果。如果您在安装PaddleOCR时遇到问题：
 
-**解决方案**：
-- 使用`--debug`参数启动以获取详细日志
-- 检查logs目录中的日志文件查找错误信息
-- 确保已安装所有必需的依赖库
+1. 可以使用预编译的wheel包安装：
+   ```
+   pip install paddlepaddle-gpu -f https://www.paddlepaddle.org.cn/whl/windows/mkl/avx/stable.html
+   ```
 
-### 6. Tesseract语言包问题
+2. 或者安装CPU版本（性能稍低但兼容性更好）：
+   ```
+   pip install paddlepaddle
+   ```
 
-**解决方案**：
-- Mac用户：`brew install tesseract-lang`安装额外语言包
-- Windows用户：在Tesseract安装时选择安装所需语言包
-- 确保配置文件中指定的语言与已安装的语言包匹配
+3. 如果仍无法安装，程序会自动降级使用Tesseract OCR引擎
 
 ---
 

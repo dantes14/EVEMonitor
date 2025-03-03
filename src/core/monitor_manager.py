@@ -13,8 +13,9 @@ import queue
 import threading
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 from loguru import logger
+import traceback
 
 from PyQt6.QtCore import QObject, pyqtSignal
 from PyQt6.QtGui import QImage, QPixmap
@@ -382,28 +383,30 @@ class MonitorManager(QObject):
             logger.error(f"检查通知条件时出错: {e}")
             return False
     
-    def _on_config_changed(self, key: str, value: any):
+    def _on_config_changed(self, key: str, value: Any) -> None:
         """
-        配置变更处理
+        配置变更回调函数
         
         参数:
-            key: 配置键
-            value: 配置值
+            key: 变更的配置键
+            value: 变更的配置值
         """
         try:
-            # 更新配置
-            self.config = self.config_manager.get_config()
+            logger.debug(f"监控管理器接收到配置变更: {key}={value}")
             
-            # 更新OCR引擎配置
+            # 更新各组件配置
             if key.startswith("ocr."):
-                self.ocr_engine.update_config(self.config)
+                self.ocr_engine.update_config()
+            elif key.startswith("notification."):
+                self.notification_manager.update_config()
+            elif key.startswith("capture.") or key.startswith("timing.capture"):
+                self.screen_capture.update_config()
+            elif key.startswith("processor.") or key.startswith("debug."):
+                self.image_processor.update_config()
+            elif key.startswith("analyzer.") or key.startswith("timing.analysis"):
+                self.data_analyzer.update_config()
             
-            # 更新通知管理器配置
-            if key.startswith("notification."):
-                self.notification_manager.update_config(self.config)
-            
-            logger.debug(f"监控管理器已更新配置: {key}")
-            
+            logger.debug("监控管理器配置更新完成")
         except Exception as e:
-            logger.error(f"更新配置时出错: {e}")
-            self.error_occurred.emit(f"更新配置失败: {str(e)}") 
+            logger.error(f"更新监控管理器配置失败: {e}")
+            traceback.print_exc() 

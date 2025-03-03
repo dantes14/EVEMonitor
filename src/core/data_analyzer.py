@@ -45,47 +45,31 @@ class DataAnalyzer:
         
         logger.debug("数据分析器初始化完成")
     
-    def update_config(self) -> None:
-        """更新配置"""
+    def update_config(self):
+        """
+        更新数据分析器配置
+        """
         with self.lock:
+            # 从配置管理器获取最新配置
             config = self.config_manager.get_config()
             
-            # 分析配置
-            self.analyzer_config = config.get("analyzer", {})
+            # 更新阈值配置
+            self.thresholds = {
+                "ship_health": float(config.get("analyzer.threshold.ship_health", 30.0)),
+                "ship_shield": float(config.get("analyzer.threshold.ship_shield", 50.0)),
+                "ship_capacitor": float(config.get("analyzer.threshold.ship_capacitor", 40.0)),
+                "threat_distance": float(config.get("analyzer.threshold.threat_distance", 15000.0))
+            }
             
-            # 阈值配置
-            self.thresholds = self.analyzer_config.get("thresholds", {
-                "shield": 30,
-                "armor": 30,
-                "structure": 30,
-                "capacitor": 20
-            })
+            # 更新关键词配置
+            self.chat_keywords = config.get("analyzer.chat_keywords", [
+                "help", "救命", "支援", "attack", "攻击"
+            ])
             
-            # 敏感词配置
-            self.chat_keywords = self.analyzer_config.get("chat_keywords", [])
+            # 更新分析间隔
+            self.analysis_interval = float(config.get("timing.analysis_interval_ms", 1000)) / 1000.0
             
-            # 聊天模式
-            self.chat_patterns = self.analyzer_config.get("chat_patterns", {
-                "local": r"\[本地\]\s*(.+?):\s*(.+)",
-                "alliance": r"\[联盟\]\s*(.+?):\s*(.+)",
-                "corporation": r"\[军团\]\s*(.+?):\s*(.+)"
-            })
-            
-            # 分析间隔
-            self.min_analysis_interval = self.analyzer_config.get("min_analysis_interval_ms", 500) / 1000.0
-            
-            # 警报冷却时间
-            self.alert_cooldown = self.analyzer_config.get("alert_cooldown_sec", 60)
-            
-            # 特殊字符修正配置
-            self.text_corrections = self.analyzer_config.get("text_corrections", {
-                "％": "%",
-                "：": ":",
-                "，": ",",
-                "。": "."
-            })
-            
-            logger.debug("数据分析器配置已更新")
+            logger.debug(f"数据分析器配置已更新: 阈值={self.thresholds}, 关键词数量={len(self.chat_keywords)}")
     
     def analyze_data(self, task: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -387,10 +371,10 @@ class DataAnalyzer:
         alerts = []
         
         # 获取阈值配置
-        shield_threshold = self.thresholds.get("shield", 30)
-        armor_threshold = self.thresholds.get("armor", 50)
-        structure_threshold = self.thresholds.get("structure", 80)
-        capacitor_threshold = self.thresholds.get("capacitor", 20)
+        shield_threshold = self.thresholds.get("ship_shield", 50.0)
+        armor_threshold = self.thresholds.get("ship_health", 30.0)
+        structure_threshold = self.thresholds.get("ship_health", 30.0)
+        capacitor_threshold = self.thresholds.get("ship_capacitor", 40.0)
         
         # 检查护盾
         shield = ship_status.get("shield")
@@ -569,7 +553,7 @@ class DataAnalyzer:
             current_time = time.time()
             
             # 检查是否超过最小分析间隔
-            return (current_time - last_time) >= self.min_analysis_interval
+            return (current_time - last_time) >= self.analysis_interval
     
     def _update_last_analysis(self, emulator: str, region_type: str) -> None:
         """

@@ -48,7 +48,7 @@ class ConfigManager(QObject):
             "simulators": []  # 模拟器列表将在首次运行时自动配置
         },
         "ocr": {
-            "engine": "paddleocr",  # paddleocr 或 tesseract
+            "engine": "paddle",  # paddle 或 tesseract
             "language": "ch",
             "confidence_threshold": 0.6,
             "system_name_region": {  # 星系名称区域相对于模拟器的位置
@@ -63,8 +63,17 @@ class ConfigManager(QObject):
                 "width_ratio": 0.8,
                 "height_ratio": 0.5
             },
-            "tesseract_path": "",  # Tesseract OCR可执行文件路径
-            "paddleocr_use_gpu": False  # 是否使用GPU加速PaddleOCR
+            "tesseract": {
+                "executable_path": "C:\\Program Files\\Tesseract-OCR\\tesseract.exe",  # Tesseract OCR可执行文件路径
+                "tessdata_dir": "C:\\Program Files\\Tesseract-OCR\\tessdata"  # 语言数据目录
+            },
+            "paddle": {
+                "use_gpu": False,  # 是否使用GPU加速PaddleOCR
+                "use_cls": True,   # 是否使用方向分类器
+                "use_det": True,   # 是否使用检测模型
+                "use_server_mode": False,  # 是否使用服务器模式
+                "model_dir": ""    # 模型目录，留空使用默认
+            }
         },
         "notification": {
             "enabled": True,
@@ -359,4 +368,14 @@ class ConfigManager(QObject):
             return True
         except Exception as e:
             logger.error(f"导入配置失败: {e}")
-            return False 
+            return False
+    
+    def update_config(self, key: str, value: Any) -> None:
+        """
+        更新配置项（兼容方法，实际调用set_config）
+        
+        参数:
+            key: 配置键
+            value: 配置值
+        """
+        return self.set_config(key, value) 

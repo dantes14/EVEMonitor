@@ -87,6 +87,12 @@ def main():
         config_path = config_dir / "config.yaml"
         config_manager = ConfigManager(config_path)
         
+        # 检查ConfigManager中是否有这些方法:
+        # - set_config()
+        # - update()
+        # - set_value()
+        # - modify_config()
+        
         # 创建Qt应用
         with open(debug_log, "a", encoding="utf-8") as f:
             f.write("正在创建Qt应用...\n")

@@ -14,7 +14,7 @@ import argparse
 import traceback
 from pathlib import Path
 
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtWidgets import QApplication, QMessageBox
 from PyQt6.QtCore import QDir, Qt, QSettings
 import qdarkstyle
 
@@ -26,6 +26,7 @@ from src.core.monitor_manager import MonitorManager
 from src.ui.main_window import MainWindow
 from src.config.config_manager import ConfigManager
 from src.utils.logger_utils import setup_logger, logger
+from src.utils.tesseract_utils import check_tesseract, install_tesseract_windows
 
 
 def parse_arguments():
@@ -48,6 +49,17 @@ def setup_exception_hook():
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
     
     sys.excepthook = exception_hook
+
+
+def show_error_dialog(message):
+    """显示错误对话框"""
+    app = QApplication.instance() or QApplication(sys.argv)
+    dialog = QMessageBox()
+    dialog.setIcon(QMessageBox.Icon.Critical)
+    dialog.setWindowTitle("EVE监视器 - 错误")
+    dialog.setText(message)
+    dialog.setStandardButtons(QMessageBox.StandardButton.Ok)
+    dialog.exec()
 
 
 def main():
@@ -77,6 +89,33 @@ def main():
     if not args.no_dark:
         app.setStyleSheet(qdarkstyle.load_stylesheet_pyqt6())
     
+    # 检查OCR依赖
+    if not check_tesseract():
+        logger.warning("未找到Tesseract OCR")
+        
+        # 仅在Windows下尝试自动安装
+        if sys.platform == 'win32':
+            # 创建临时QApplication实例用于显示对话框
+            app = QApplication.instance() or QApplication(sys.argv)
+            
+            # 询问用户是否自动安装
+            dialog = QMessageBox()
+            dialog.setIcon(QMessageBox.Icon.Question)
+            dialog.setWindowTitle("安装Tesseract OCR")
+            dialog.setText("未找到Tesseract OCR引擎，此组件用于识别游戏中的文字，需要安装才能正常使用OCR功能。")
+            dialog.setInformativeText("是否自动下载并安装Tesseract OCR？")
+            dialog.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            dialog.setDefaultButton(QMessageBox.StandardButton.Yes)
+            
+            if dialog.exec() == QMessageBox.StandardButton.Yes:
+                logger.info("用户选择自动安装Tesseract OCR")
+                install_tesseract_windows()
+                logger.info("请在安装完成后重启程序")
+                return
+            else:
+                logger.info("用户选择跳过安装Tesseract OCR")
+                # 继续启动，但OCR功能可能不可用
+    
     # 加载配置
     config_path = args.config if args.config else os.path.join(project_root, "config", "config.yaml")
     config_manager = ConfigManager(config_path)
@@ -100,4 +139,11 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main()) 
+    try:
+        sys.exit(main())
+    except Exception as e:
+        error_msg = f"程序启动失败: {str(e)}"
+        logger.error(error_msg)
+        logger.error(traceback.format_exc())
+        show_error_dialog(error_msg)
+        sys.exit(1) 

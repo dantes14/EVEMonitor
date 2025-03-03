@@ -34,41 +34,27 @@ class ImageProcessor:
         
         logger.debug("图像处理器初始化完成")
     
-    def update_config(self) -> None:
-        """更新配置"""
+    def update_config(self):
+        """
+        更新图像处理器配置
+        """
         with self.lock:
-            # 处理配置
-            self.processor_config = self.config_manager.get_config("image_processor", {})
+            # 从配置管理器获取最新配置
+            config = self.config_manager.get_config()
             
-            # 二值化阈值
-            self.threshold_values = self.processor_config.get("thresholds", {
-                "default": 127,
-                "ship_status": 150,
-                "chat": 140,
-                "target": 130,
-                "system": 120
-            })
+            # 更新处理器配置
+            self.debug_mode = config.get("debug.enabled", False)
+            self.save_debug_images = config.get("debug.save_images", False)
             
-            # 增强参数
-            self.enhancement_params = self.processor_config.get("enhancement", {
-                "alpha": 1.2,  # 对比度
-                "beta": 10,     # 亮度
-                "gamma": 1.0    # 伽马值
-            })
+            # 设置默认阈值
+            self.thresholds = {
+                "text": float(config.get("processor.threshold.text", 127)),
+                "ship": float(config.get("processor.threshold.ship", 150)),
+                "target": float(config.get("processor.threshold.target", 140)),
+                "system": float(config.get("processor.threshold.system", 130))
+            }
             
-            # 噪声移除参数
-            self.noise_params = self.processor_config.get("noise_removal", {
-                "kernel_size": 3,
-                "iterations": 1
-            })
-            
-            # 缩放参数
-            self.scale_params = self.processor_config.get("scaling", {
-                "enabled": True,
-                "factor": 1.5
-            })
-            
-            logger.debug("图像处理器配置已更新")
+            logger.debug(f"图像处理器配置已更新: 调试模式={self.debug_mode}, 保存调试图像={self.save_debug_images}")
     
     def process_image(self, image: np.ndarray, region_type: str = "default") -> np.ndarray:
         """
@@ -122,7 +108,7 @@ class ImageProcessor:
         enhanced = self._enhance_image(gray)
         
         # 二值化
-        threshold = self.threshold_values.get("default", 127)
+        threshold = self.thresholds.get("text", 127)
         _, binary = cv2.threshold(enhanced, threshold, 255, cv2.THRESH_BINARY)
         
         # 移除噪点
@@ -147,12 +133,12 @@ class ImageProcessor:
             gray = image
         
         # 增强对比度
-        alpha = self.enhancement_params.get("alpha", 1.2)
-        beta = self.enhancement_params.get("beta", 10)
+        alpha = 1.2
+        beta = 10
         enhanced = cv2.convertScaleAbs(gray, alpha=alpha, beta=beta)
         
         # 自适应二值化
-        threshold = self.threshold_values.get("ship_status", 150)
+        threshold = self.thresholds.get("ship", 150)
         binary = cv2.adaptiveThreshold(enhanced, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
                                       cv2.THRESH_BINARY, 11, 2)
         
@@ -193,7 +179,7 @@ class ImageProcessor:
         blurred = cv2.GaussianBlur(gray, (3, 3), 0)
         
         # 二值化
-        threshold = self.threshold_values.get("chat", 140)
+        threshold = self.thresholds.get("target", 140)
         _, binary = cv2.threshold(blurred, threshold, 255, cv2.THRESH_BINARY)
         
         # 移除噪点
@@ -221,7 +207,7 @@ class ImageProcessor:
         enhanced = self._enhance_image(gray, alpha=1.3, beta=15)
         
         # 二值化
-        threshold = self.threshold_values.get("target", 130)
+        threshold = self.thresholds.get("target", 140)
         _, binary = cv2.threshold(enhanced, threshold, 255, cv2.THRESH_BINARY)
         
         # 移除噪点
@@ -253,7 +239,7 @@ class ImageProcessor:
         enhanced = self._enhance_image(sharpened, alpha=1.4, beta=10)
         
         # 二值化
-        threshold = self.threshold_values.get("system", 120)
+        threshold = self.thresholds.get("system", 130)
         _, binary = cv2.threshold(enhanced, threshold, 255, cv2.THRESH_BINARY)
         
         # 移除噪点
@@ -276,9 +262,9 @@ class ImageProcessor:
             np.ndarray: 增强后的图像
         """
         # 使用默认值或传入值
-        alpha = alpha or self.enhancement_params.get("alpha", 1.2)
-        beta = beta or self.enhancement_params.get("beta", 10)
-        gamma = gamma or self.enhancement_params.get("gamma", 1.0)
+        alpha = alpha or 1.2
+        beta = beta or 10
+        gamma = gamma or 1.0
         
         # 对比度和亮度调整
         adjusted = cv2.convertScaleAbs(image, alpha=alpha, beta=beta)
@@ -303,8 +289,8 @@ class ImageProcessor:
         Returns:
             np.ndarray: 去噪后的图像
         """
-        kernel_size = self.noise_params.get("kernel_size", 3)
-        iterations = self.noise_params.get("iterations", 1)
+        kernel_size = 3
+        iterations = 1
         
         # 创建核
         kernel = np.ones((kernel_size, kernel_size), np.uint8)
@@ -324,10 +310,7 @@ class ImageProcessor:
         Returns:
             np.ndarray: 缩放后的图像
         """
-        if not self.scale_params.get("enabled", True):
-            return image
-        
-        scale_factor = self.scale_params.get("factor", 1.5)
+        scale_factor = 1.5
         
         if scale_factor == 1.0:
             return image

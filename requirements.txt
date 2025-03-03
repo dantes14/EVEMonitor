@@ -20,12 +20,11 @@ opencv-python>=4.6.0
 Pillow>=9.2.0
 
 # OCR引擎
-pytesseract>=0.3.10  # 推荐使用的OCR引擎
+pytesseract>=0.3.10  # Tesseract OCR引擎
 
-# 以下是可选OCR引擎，安装可能在某些系统上出现困难
-# paddlepaddle==2.3.2; sys_platform != "darwin"  # 不推荐在macOS上安装
-# paddleocr==2.5.0; sys_platform != "darwin"     # 不推荐在macOS上安装
-# 如需在Windows系统上使用PaddleOCR，可取消上面两行的注释
+# PaddleOCR引擎 (Windows支持)
+paddlepaddle==2.3.2  # Windows下推荐使用
+paddleocr==2.5.0     # Windows下推荐使用
 
 # 网络和其他工具
 watchdog>=2.1.0

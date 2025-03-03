@@ -370,10 +370,14 @@ class OCRConfigWidget(QWidget):
     
     def _on_browse_tesseract_clicked(self):
         """浏览Tesseract可执行文件按钮点击事件"""
+        initial_dir = "C:\\Program Files\\Tesseract-OCR"
+        if os.path.exists(self.tesseract_path_edit.text()):
+            initial_dir = os.path.dirname(self.tesseract_path_edit.text())
+        
         file_path, _ = QFileDialog.getOpenFileName(
             self,
             "选择Tesseract可执行文件",
-            self.tesseract_path_edit.text(),
+            initial_dir,
             "可执行文件 (*.exe);;所有文件 (*.*)"
         )
         if file_path:
@@ -381,10 +385,14 @@ class OCRConfigWidget(QWidget):
     
     def _on_browse_tessdata_clicked(self):
         """浏览语言数据目录按钮点击事件"""
+        initial_dir = "C:\\Program Files\\Tesseract-OCR\\tessdata"
+        if os.path.exists(self.tessdata_dir_edit.text()):
+            initial_dir = self.tessdata_dir_edit.text()
+        
         dir_path = QFileDialog.getExistingDirectory(
             self,
             "选择语言数据目录",
-            self.tessdata_dir_edit.text(),
+            initial_dir,
             QFileDialog.Option.ShowDirsOnly
         )
         if dir_path:
