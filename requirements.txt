@@ -1,0 +1,28 @@
+# 基础依赖
+PyQt6>=6.4.0
+loguru>=0.6.0
+pyyaml>=6.0
+qdarkstyle>=3.1.0  # PyQt暗黑主题
+pyobjc-framework-Quartz>=9.0; sys_platform == "darwin"  # macOS屏幕捕获
+
+# 图像处理
+numpy>=1.23.0
+opencv-python>=4.6.0
+Pillow>=9.2.0
+
+# OCR引擎
+pytesseract>=0.3.10  # 推荐使用的OCR引擎
+
+# 以下是可选OCR引擎，安装可能在某些系统上出现困难
+# paddlepaddle==2.3.2; sys_platform != "darwin"  # 不推荐在macOS上安装
+# paddleocr==2.5.0; sys_platform != "darwin"     # 不推荐在macOS上安装
+# 如需在Windows系统上使用PaddleOCR，可取消上面两行的注释
+
+# 网络和其他工具
+requests>=2.28.0
+watchdog>=2.1.0
+
+# 开发工具（可选）
+# pytest>=7.1.0
+# black>=22.6.0
+# flake8>=4.0.0
