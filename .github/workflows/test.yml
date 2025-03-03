@@ -40,7 +40,15 @@ jobs:
           libxcb-dri2-0 \
           libxcb-dri3-0 \
           libxcb-glx0 \
-          libxcb-present0
+          libxcb-present0 \
+          libxcb-render0 \
+          libxcb-shm0 \
+          libxcb-util1 \
+          libxcb-xkb1 \
+          libxkbcommon-x11-0 \
+          libxkbcommon0 \
+          x11-utils \
+          xvfb
     
     - name: Install dependencies
       run: |
@@ -54,7 +62,7 @@ jobs:
     
     - name: Run tests
       run: |
-        pytest tests/ -v
+        xvfb-run -a pytest tests/ -v
     
     - name: Upload coverage reports
       uses: codecov/codecov-action@v3
