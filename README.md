@@ -1,5 +1,12 @@
 # EVEMonitor
 
+[![Python Tests](https://github.com/dantes14/EVEMonitor/actions/workflows/test.yml/badge.svg)](https://github.com/dantes14/EVEMonitor/actions/workflows/test.yml)
+[![Codecov](https://codecov.io/gh/dantes14/EVEMonitor/branch/main/graph/badge.svg)](https://codecov.io/gh/dantes14/EVEMonitor)
+[![PyPI version](https://badge.fury.io/py/evemonitor.svg)](https://badge.fury.io/py/evemonitor)
+[![Python Versions](https://img.shields.io/pypi/pyversions/evemonitor.svg)](https://pypi.org/project/evemonitor/)
+[![License](https://img.shields.io/github/license/dantes14/EVEMonitor.svg)](https://github.com/dantes14/EVEMonitor/blob/main/LICENSE)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
 EVE游戏监控工具 - 一个基于Python的EVE Online游戏监控工具，用于实时监控游戏画面并识别关键信息。
 
 ## 功能特性
@@ -24,6 +31,20 @@ EVE游戏监控工具 - 一个基于Python的EVE Online游戏监控工具，用�
   - 现代化的UI设计
   - 深色/浅色主题
   - 布局预览功能
+
+## 项目截图
+
+### 主界面
+![主界面](screenshots/main_window.png)
+
+### OCR配置
+![OCR配置](screenshots/ocr_config.png)
+
+### 屏幕配置
+![屏幕配置](screenshots/screen_config.png)
+
+### 通知配置
+![通知配置](screenshots/notification_config.png)
 
 ## 系统要求
 
@@ -99,13 +120,7 @@ python main.py
 
 ## 贡献指南
 
-欢迎提交Issue和Pull Request！
-
-1. Fork 本仓库
-2. 创建你的特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交你的更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 打开一个Pull Request
+欢迎提交Issue和Pull Request！详见[贡献指南](CONTRIBUTING.md)。
 
 ## 许可证
 
@@ -115,3 +130,4 @@ python main.py
 
 - 项目维护者: dantes14
 - 项目链接: [https://github.com/dantes14/EVEMonitor](https://github.com/dantes14/EVEMonitor)
+- 邮箱: [你的邮箱]
