@@ -1,104 +1,117 @@
-# EVE监视器
+# EVEMonitor
 
-EVE监视器是一款为《EVE：无烬星河》国服手游设计的多模拟器监控工具。它可以监控屏幕上的多个模拟器，识别星系名称和船只信息，并在检测到舰船时通过多种方式发送通知。
+EVE游戏监控工具 - 一个基于Python的EVE Online游戏监控工具，用于实时监控游戏画面并识别关键信息。
 
-## 主要功能
+## 功能特性
 
-- **多模拟器支持**：支持监控屏幕上的多个手游模拟器
-- **OCR识别**：使用PaddleOCR或Tesseract识别星系名称和舰船信息
-- **实时通知**：检测到舰船时通过Webhook或API发送通知
-- **可视化配置**：直观的界面配置监控区域、模拟器布局和识别参数
-- **热更新配置**：支持在不重启应用的情况下更新配置
-- **自定义过滤**：可设置忽略特定星系或舰船类型
-- **高性能处理**：使用队列管理确保数据处理不延迟
+- 🎮 支持多种监控模式
+  - 全屏监控
+  - 自定义区域监控
+  - 网格布局监控
+- 🔍 强大的OCR识别
+  - 支持PaddleOCR和Tesseract两种引擎
+  - 可配置的识别区域
+  - 多语言支持
+- 📊 数据分析和统计
+  - 实时数据采集
+  - 数据可视化
+  - 历史记录查询
+- 🔔 灵活的通知系统
+  - 支持多种通知方式
+  - 可自定义通知规则
+  - 通知优先级管理
+- 🎨 美观的用户界面
+  - 现代化的UI设计
+  - 深色/浅色主题
+  - 布局预览功能
+
+## 系统要求
+
+- Python 3.8+
+- Windows/macOS/Linux
+- 支持OpenGL的显卡（用于屏幕捕获）
 
 ## 安装说明
 
-### 系统要求
-
-- Python 3.8及以上版本
-- 支持的操作系统：Windows 10/11, macOS, Linux
-
-### 安装步骤
-
-1. 克隆项目仓库：
-   ```bash
-   git clone https://github.com/yourusername/EVEMonitor.git
-   cd EVEMonitor
-   ```
-
-2. 安装依赖：
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. 根据需要安装OCR引擎：
-   - PaddleOCR (推荐):
-     ```bash
-     # 已在requirements.txt中包含
-     ```
-   - Tesseract (可选):
-     ```bash
-     # 安装Tesseract：
-     # Windows: 从 https://github.com/UB-Mannheim/tesseract/wiki 下载并安装
-     # macOS: brew install tesseract
-     # Linux: sudo apt install tesseract-ocr
-     ```
-
-## 使用说明
-
-### 启动应用
-
+1. 克隆仓库
 ```bash
-cd EVEMONITOR
-python src/main.py
+git clone https://github.com/dantes14/EVEMonitor.git
+cd EVEMonitor
 ```
 
-### 命令行参数
-
-- `--debug`：启用调试模式
-- `--config <path>`：指定配置文件路径
-- `--log <path>`：指定日志文件路径
-
-示例：
+2. 创建虚拟环境（推荐）
 ```bash
-python src/main.py --debug --config custom_config.yaml
+python -m venv venv
+source venv/bin/activate  # Linux/macOS
+venv\Scripts\activate     # Windows
 ```
 
-### 配置教程
+3. 安装依赖
+```bash
+pip install -r requirements.txt
+```
 
-1. **屏幕设置**：
-   - 设置监控区域（全屏或自定义区域）
-   - 配置模拟器布局（网格布局或自定义位置）
+4. 安装开发依赖（可选）
+```bash
+pip install -r requirements-dev.txt
+```
 
-2. **OCR设置**：
-   - 选择OCR引擎（PaddleOCR或Tesseract）
-   - 配置识别参数（置信度阈值、语言等）
-   - 设置识别区域（系统名称区域、船表区域）
+## 使用方法
 
-3. **通知设置**：
-   - 配置通知方式（Webhook或API）
-   - 设置消息模板和过滤选项
+1. 启动程序
+```bash
+python main.py
+```
 
-## 问题排查
+2. 配置监控设置
+   - 选择监控模式
+   - 配置OCR参数
+   - 设置通知规则
 
-常见问题及解决方案：
+3. 开始监控
+   - 点击"开始监控"按钮
+   - 程序会自动捕获屏幕并识别信息
 
-1. **OCR识别不准确**：
-   - 调整OCR配置参数，提高置信度阈值
-   - 确保游戏界面可见且文本清晰
-   - 尝试不同的OCR引擎
+## 配置说明
 
-2. **通知未推送**：
-   - 检查网络连接
-   - 验证API地址和密钥
-   - 查看日志文件获取详细错误信息
+### OCR配置
+- 支持PaddleOCR和Tesseract两种引擎
+- 可配置识别区域和参数
+- 支持多语言识别
 
-3. **CPU占用高**：
-   - 增加截图间隔时间
-   - 减少模拟器数量
-   - 关闭调试功能
+### 通知配置
+- 支持多种通知方式
+- 可自定义通知规则
+- 支持通知优先级
+
+### 界面配置
+- 支持深色/浅色主题
+- 可自定义布局
+- 支持布局预览
+
+## 开发计划
+
+- [ ] 添加更多OCR引擎支持
+- [ ] 优化识别准确率
+- [ ] 添加数据分析功能
+- [ ] 支持更多通知方式
+- [ ] 添加插件系统
+
+## 贡献指南
+
+欢迎提交Issue和Pull Request！
+
+1. Fork 本仓库
+2. 创建你的特性分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交你的更改 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 打开一个Pull Request
 
 ## 许可证
 
-本项目采用MIT许可证。详情请查看`LICENSE`文件。
+本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情
+
+## 联系方式
+
+- 项目维护者: dantes14
+- 项目链接: [https://github.com/dantes14/EVEMonitor](https://github.com/dantes14/EVEMonitor)
