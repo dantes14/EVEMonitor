@@ -117,10 +117,21 @@ python main.py
 - [ ] 添加数据分析功能
 - [ ] 支持更多通知方式
 - [ ] 添加插件系统
+- [ ] 提高测试覆盖率
+- [ ] 添加性能测试
+- [ ] 添加集成测试
+- [ ] 添加端到端测试
 
 ## 贡献指南
 
 欢迎提交Issue和Pull Request！详见[贡献指南](CONTRIBUTING.md)。
+
+在提交代码前，请确保：
+- 所有测试通过
+- 新功能包含相应的测试用例
+- 代码覆盖率不低于当前水平
+- 遵循项目的代码风格规范
+- 更新相关文档
 
 ## 许可证
 
@@ -130,4 +141,4 @@ python main.py
 
 - 项目维护者: dantes14
 - 项目链接: [https://github.com/dantes14/EVEMonitor](https://github.com/dantes14/EVEMonitor)
-- 邮箱: [你的邮箱]
+- 邮箱: dantes14@163.com

@@ -19,6 +19,8 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, ImageGrab
 import cv2
+import mss
+import mss.tools
 
 # 适配不同平台
 if sys.platform == 'darwin':  # macOS
@@ -37,6 +39,10 @@ else:  # Linux
 
 from src.utils.logger_utils import logger
 from src.utils.queue_manager import queue_manager
+
+from PyQt6.QtWidgets import QApplication
+from PyQt6.QtGui import QImage, QPixmap
+from PyQt6.QtCore import Qt
 
 
 class WindowNotFoundError(Exception):
@@ -79,6 +85,10 @@ class ScreenCapture:
         self.frame_count = 0
         self.last_fps_time = time.time()
         self.current_fps = 0.0
+        
+        self.sct = mss.mss()
+        self.last_capture_time = 0
+        self.last_capture = None
         
         logger.debug("屏幕捕获器初始化完成")
     
@@ -501,4 +511,128 @@ class ScreenCapture:
         self.capture_quality = self.config_manager.get_config().get("monitor", {}).get("capture", {}).get("quality", 80)
         self.capture_method = self.config_manager.get_config().get("monitor", {}).get("capture", {}).get("method", "window")
         
-        logger.debug("屏幕捕获器配置已更新") 
+        logger.debug("屏幕捕获器配置已更新")
+    
+    def capture(self, region: Optional[Dict[str, int]] = None) -> Optional[QImage]:
+        """
+        捕获屏幕或指定区域
+        
+        参数:
+            region: 区域信息，格式为 {"top": y, "left": x, "width": w, "height": h}
+                   如果为None，则捕获整个屏幕
+            
+        返回:
+            QImage: 捕获的图像，如果失败则返回None
+        """
+        try:
+            # 检查捕获间隔
+            current_time = time.time()
+            if current_time - self.last_capture_time < self.capture_interval:
+                return self.last_capture
+            
+            # 获取屏幕信息
+            monitor = self.sct.monitors[1]  # 主显示器
+            if region:
+                # 计算实际捕获区域
+                capture_region = {
+                    "top": monitor["top"] + region.get("top", 0),
+                    "left": monitor["left"] + region.get("left", 0),
+                    "width": region.get("width", monitor["width"]),
+                    "height": region.get("height", monitor["height"])
+                }
+            else:
+                capture_region = monitor
+            
+            # 捕获屏幕
+            screenshot = self.sct.grab(capture_region)
+            
+            # 转换为QImage
+            img = QImage(
+                screenshot.rgb,
+                screenshot.width,
+                screenshot.height,
+                screenshot.width * 3,
+                QImage.Format.Format_RGB888
+            )
+            
+            # 更新状态
+            self.last_capture_time = current_time
+            self.last_capture = img
+            
+            return img
+            
+        except Exception as e:
+            logger.error(f"屏幕捕获失败: {e}")
+            return None
+    
+    def capture_region(self, x: int, y: int, width: int, height: int) -> Optional[QImage]:
+        """
+        捕获指定区域
+        
+        参数:
+            x: 左上角x坐标
+            y: 左上角y坐标
+            width: 宽度
+            height: 高度
+            
+        返回:
+            QImage: 捕获的图像，如果失败则返回None
+        """
+        region = {
+            "top": y,
+            "left": x,
+            "width": width,
+            "height": height
+        }
+        return self.capture(region)
+    
+    def get_screen_size(self) -> Dict[str, int]:
+        """
+        获取屏幕尺寸
+        
+        返回:
+            Dict[str, int]: 屏幕尺寸信息
+        """
+        try:
+            monitor = self.sct.monitors[1]  # 主显示器
+            return {
+                "width": monitor["width"],
+                "height": monitor["height"]
+            }
+        except Exception as e:
+            logger.error(f"获取屏幕尺寸失败: {e}")
+            return {"width": 0, "height": 0}
+    
+    def get_available_monitors(self) -> list:
+        """
+        获取可用显示器列表
+        
+        返回:
+            list: 显示器信息列表
+        """
+        try:
+            monitors = []
+            for i, monitor in enumerate(self.sct.monitors):
+                if i == 0:  # 跳过所有显示器的组合
+                    continue
+                monitors.append({
+                    "id": i,
+                    "name": f"显示器 {i}",
+                    "width": monitor["width"],
+                    "height": monitor["height"],
+                    "top": monitor["top"],
+                    "left": monitor["left"]
+                })
+            return monitors
+        except Exception as e:
+            logger.error(f"获取显示器列表失败: {e}")
+            return []
+    
+    def set_capture_interval(self, interval: float):
+        """
+        设置捕获间隔
+        
+        参数:
+            interval: 捕获间隔（秒）
+        """
+        self.capture_interval = max(0.1, interval) 

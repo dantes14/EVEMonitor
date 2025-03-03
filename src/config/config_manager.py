@@ -25,8 +25,8 @@ class ConfigManager(QObject):
     """配置管理器类，负责管理应用程序配置"""
     
     # 信号定义
-    config_changed = pyqtSignal(str, object)  # 配置项变更信号
-    config_reloaded = pyqtSignal()  # 配置重新加载信号
+    config_changed = pyqtSignal(dict)  # 配置项变更信号
+    config_reloaded = pyqtSignal(dict)  # 配置重新加载信号
     
     # 默认配置
     DEFAULT_CONFIG = {
@@ -97,115 +97,205 @@ class ConfigManager(QObject):
         }
     }
     
-    def __init__(self, config_path: Union[str, Path]):
-        """初始化配置管理器
+    def __init__(self, config_path: str = None, default_config: Dict[str, Any] = None):
+        """
+        初始化配置管理器
         
-        Args:
-            config_path: 配置文件路径
+        参数:
+            config_path: 配置文件路径，如果为None则使用默认路径
+            default_config: 默认配置字典，如果为None则使用内置默认配置
         """
         super().__init__()
         
-        self.config_path = Path(config_path)
-        self.config: Dict[str, Any] = {}
-        self._lock = threading.RLock()  # 重入锁，用于线程安全操作
+        # 设置配置文件路径
+        if config_path is None:
+            config_dir = Path.home() / ".evemonitor"
+            config_dir.mkdir(parents=True, exist_ok=True)
+            self.config_path = config_dir / "config.yaml"
+        else:
+            self.config_path = Path(config_path)
         
-        # 确保配置文件目录存在
-        self.config_path.parent.mkdir(parents=True, exist_ok=True)
+        # 设置默认配置
+        if default_config is None:
+            self.default_config = {
+                "notification": {
+                    "enabled": True,
+                    "title": "EVEMonitor",
+                    "min_interval": 60,
+                    "system_notify": True,
+                    "sound_notify": True,
+                    "sound_file": ""
+                },
+                "screen": {
+                    "monitor_mode": "full",
+                    "custom_region": {
+                        "enabled": False,
+                        "x": 0,
+                        "y": 0,
+                        "width": 800,
+                        "height": 600
+                    },
+                    "grid_layout": {
+                        "enabled": False,
+                        "rows": 2,
+                        "columns": 2,
+                        "spacing": 10
+                    }
+                },
+                "ocr": {
+                    "engine": "tesseract",
+                    "language": "chi_sim",
+                    "confidence": 0.8,
+                    "use_gpu": False,
+                    "num_threads": 4,
+                    "batch_size": 1
+                }
+            }
+        else:
+            self.default_config = default_config
         
         # 加载配置
-        if self.config_path.exists():
-            self.load_config()
-        else:
-            logger.info(f"配置文件不存在，创建默认配置: {self.config_path}")
-            self.config = copy.deepcopy(self.DEFAULT_CONFIG)
-            self.save_config()
+        self.config = self._load_config()
+        
+        logger.debug("配置管理器初始化完成")
     
-    def load_config(self) -> None:
-        """从文件加载配置"""
+    def _load_config(self) -> Dict[str, Any]:
+        """
+        加载配置
+        
+        返回:
+            Dict[str, Any]: 配置字典
+        """
         try:
-            with self._lock:
-                with open(self.config_path, 'r', encoding='utf-8') as f:
-                    loaded_config = yaml.safe_load(f)
-                
-                # 使用递归方法合并配置，确保新版本中的新配置项也被包含
-                self.config = self._merge_config(copy.deepcopy(self.DEFAULT_CONFIG), loaded_config)
-                
-                logger.info(f"配置已加载: {self.config_path}")
-                self.config_reloaded.emit()
+            # 如果配置文件存在，则加载
+            if self.config_path.exists():
+                with open(self.config_path, "r", encoding="utf-8") as f:
+                    user_config = yaml.safe_load(f)
+            else:
+                user_config = {}
+            
+            # 合并默认配置和用户配置
+            config = self._merge_config(self.default_config, user_config)
+            
+            # 保存合并后的配置
+            self._save_config(config)
+            
+            return config
+            
         except Exception as e:
             logger.error(f"加载配置失败: {e}")
-            self.config = copy.deepcopy(self.DEFAULT_CONFIG)
+            return self.default_config.copy()
     
-    def save_config(self) -> None:
-        """保存配置到文件"""
+    def _merge_config(self, default: Dict[str, Any], user: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        合并默认配置和用户配置
+        
+        参数:
+            default: 默认配置
+            user: 用户配置
+            
+        返回:
+            Dict[str, Any]: 合并后的配置
+        """
+        result = default.copy()
+        
+        for key, value in user.items():
+            if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+                result[key] = self._merge_config(result[key], value)
+            else:
+                result[key] = value
+        
+        return result
+    
+    def _save_config(self, config: Dict[str, Any]) -> None:
+        """
+        保存配置
+        
+        参数:
+            config: 要保存的配置
+        """
         try:
-            with self._lock:
-                with open(self.config_path, 'w', encoding='utf-8') as f:
-                    yaml.dump(self.config, f, default_flow_style=False, allow_unicode=True)
-                
-                logger.debug(f"配置已保存: {self.config_path}")
+            # 确保配置目录存在
+            self.config_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            # 保存配置
+            with open(self.config_path, "w", encoding="utf-8") as f:
+                yaml.dump(config, f, allow_unicode=True, sort_keys=False)
+            
+            logger.debug("配置已保存")
+            
         except Exception as e:
             logger.error(f"保存配置失败: {e}")
     
-    def get_config(self, key: str = None, default: Any = None) -> Any:
-        """获取配置值
-        
-        Args:
-            key: 配置键路径，使用点号分隔，如 "ocr.engine"
-            default: 如果配置不存在，返回的默认值
-            
-        Returns:
-            配置值或默认值
+    def get_config(self) -> Dict[str, Any]:
         """
-        with self._lock:
-            if key is None:
-                return copy.deepcopy(self.config)
-            
-            value = self.config
-            try:
-                for k in key.split('.'):
-                    if not isinstance(value, dict):
-                        return default
-                    value = value.get(k, default)
-                    if value is default:
-                        return default
-                return copy.deepcopy(value)
-            except (KeyError, TypeError):
-                return default
+        获取配置
+        
+        返回:
+            Dict[str, Any]: 配置字典
+        """
+        return self.config.copy()
     
     def set_config(self, key: str, value: Any) -> None:
-        """设置配置值
-        
-        Args:
-            key: 配置键路径，使用点号分隔，如 "ocr.engine"
-            value: 要设置的值
         """
-        with self._lock:
-            if key is None:
-                return
-            
-            keys = key.split('.')
-            target = self.config
-            
-            # 导航到最后一个键的父级
+        设置配置项
+        
+        参数:
+            key: 配置键
+            value: 配置值
+        """
+        try:
+            # 更新配置
+            keys = key.split(".")
+            current = self.config
             for k in keys[:-1]:
-                if k not in target:
-                    target[k] = {}
-                target = target[k]
+                current = current.setdefault(k, {})
+            current[keys[-1]] = value
             
-            # 设置值
-            last_key = keys[-1]
-            old_value = target.get(last_key)
+            # 保存配置
+            self._save_config(self.config)
             
-            # 只有当值发生变化时才更新和发出信号
-            if old_value != value:
-                target[last_key] = value
-                # 发送变更的值，而不是完整的配置对象
-                self.config_changed.emit(key, value)
-                logger.debug(f"配置已更新: {key} = {value}")
-                
-                # 自动保存配置
-                self.save_config()
+            # 发送配置变更信号
+            self.config_changed.emit({key: value})
+            
+            logger.debug(f"配置已更新: {key} = {value}")
+            
+        except Exception as e:
+            logger.error(f"设置配置失败: {e}")
+            raise
+    
+    def reload_config(self) -> None:
+        """重新加载配置"""
+        try:
+            # 加载配置
+            self.config = self._load_config()
+            
+            # 发送配置重载信号
+            self.config_reloaded.emit(self.config)
+            
+            logger.debug("配置已重载")
+            
+        except Exception as e:
+            logger.error(f"重载配置失败: {e}")
+            raise
+    
+    def reset_config(self) -> None:
+        """重置配置为默认值"""
+        try:
+            # 重置配置
+            self.config = self.default_config.copy()
+            
+            # 保存配置
+            self._save_config(self.config)
+            
+            # 发送配置重载信号
+            self.config_reloaded.emit(self.config)
+            
+            logger.debug("配置已重置")
+            
+        except Exception as e:
+            logger.error(f"重置配置失败: {e}")
+            raise
     
     def update_simulator_config(self, simulators: List[Dict[str, Any]]) -> None:
         """更新模拟器配置
@@ -214,42 +304,6 @@ class ConfigManager(QObject):
             simulators: 模拟器配置列表
         """
         self.set_config("screen.simulators", simulators)
-    
-    def reset_config(self) -> None:
-        """重置配置为默认值"""
-        with self._lock:
-            self.config = copy.deepcopy(self.DEFAULT_CONFIG)
-            self.save_config()
-            self.config_reloaded.emit()
-            logger.info("配置已重置为默认值")
-    
-    def _merge_config(self, default: Dict[str, Any], user: Dict[str, Any]) -> Dict[str, Any]:
-        """递归合并配置，确保默认配置中的所有键都存在
-        
-        Args:
-            default: 默认配置
-            user: 用户配置
-            
-        Returns:
-            合并后的配置
-        """
-        if user is None:
-            return default
-        
-        result = copy.deepcopy(default)
-        
-        for key, value in user.items():
-            # 如果用户配置中有而默认配置没有的键，保留用户配置
-            if key not in result:
-                result[key] = value
-            # 如果两者都是字典，递归合并
-            elif isinstance(result[key], dict) and isinstance(value, dict):
-                result[key] = self._merge_config(result[key], value)
-            # 否则使用用户配置
-            else:
-                result[key] = value
-        
-        return result
     
     def export_config(self, export_path: Union[str, Path]) -> bool:
         """导出配置到指定路径
@@ -284,7 +338,7 @@ class ConfigManager(QObject):
             
             self.config = self._merge_config(copy.deepcopy(self.DEFAULT_CONFIG), loaded_config)
             self.save_config()
-            self.config_reloaded.emit()
+            self.config_reloaded.emit(self.config)
             logger.info(f"配置已导入: {import_path}")
             return True
         except Exception as e:
