@@ -189,7 +189,7 @@ class MainWindow(QMainWindow):
         monitor_layout = QVBoxLayout(monitor_tab)
         
         # 监控状态窗口部件
-        self.monitor_status_widget = MonitorStatusWidget(self.monitor_manager)
+        self.monitor_status_widget = MonitorStatusWidget(self.config_manager)
         monitor_layout.addWidget(self.monitor_status_widget)
         
         self.tab_widget.addTab(monitor_tab, "监控状态")

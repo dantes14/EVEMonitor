@@ -227,14 +227,30 @@ class ConfigManager(QObject):
         except Exception as e:
             logger.error(f"保存配置失败: {e}")
     
-    def get_config(self) -> Dict[str, Any]:
+    def get_config(self, key: str = None) -> Any:
         """
         获取配置
         
+        参数:
+            key: 配置键，如果为None则返回整个配置
+            
         返回:
-            Dict[str, Any]: 配置字典
+            Any: 配置值或整个配置字典
         """
-        return self.config.copy()
+        if key is None:
+            return self.config.copy()
+            
+        # 处理嵌套键
+        keys = key.split('.')
+        current = self.config
+        
+        for k in keys:
+            if isinstance(current, dict) and k in current:
+                current = current[k]
+            else:
+                return None
+                
+        return current
     
     def set_config(self, key: str, value: Any) -> None:
         """

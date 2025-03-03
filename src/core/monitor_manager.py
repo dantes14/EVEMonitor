@@ -50,7 +50,7 @@ class MonitorManager(QObject):
         self.config = config_manager.get_config()
         
         # 初始化组件
-        self.screen_capture = ScreenCapture()
+        self.screen_capture = ScreenCapture(config_manager)
         self.ocr_engine = OCREngine(config_manager)
         self.notification_manager = NotificationManager(config_manager)
         
