@@ -1,0 +1,165 @@
+<Window x:Class="EVEMonitor.UI.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        mc:Ignorable="d"
+        Title="EVE监控设置" Height="600" Width="800"
+        TextElement.Foreground="{DynamicResource MaterialDesignBody}"
+        TextElement.FontWeight="Regular"
+        TextElement.FontSize="13"
+        TextOptions.TextFormattingMode="Ideal"
+        TextOptions.TextRenderingMode="Auto"
+        Background="{DynamicResource MaterialDesignPaper}"
+        FontFamily="{DynamicResource MaterialDesignFont}">
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesignTheme.Button.xaml" />
+                <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesignTheme.TextBox.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 标题 -->
+        <TextBlock Grid.Row="0" Text="应用程序设置" Style="{StaticResource MaterialDesignHeadline5TextBlock}" Margin="0,0,0,16"/>
+
+        <!-- 设置内容区域 -->
+        <TabControl Grid.Row="1" Style="{StaticResource MaterialDesignTabControl}">
+            <!-- 一般设置 -->
+            <TabItem Header="一般设置">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="8">
+                        <GroupBox Header="截图设置" Margin="0,8,0,8" Style="{StaticResource MaterialDesignGroupBox}">
+                            <StackPanel Margin="8">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="截图间隔(毫秒):" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                                    <TextBox Grid.Row="0" Grid.Column="1" x:Name="txtScreenshotInterval" Text="{Binding ScreenshotInterval}" Margin="0,8,0,8"/>
+
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="保存截图:" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                                    <CheckBox Grid.Row="1" Grid.Column="1" x:Name="chkSaveScreenshots" IsChecked="{Binding SaveScreenshots}" Margin="0,8,0,8"/>
+
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="截图保存路径:" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                                    <Grid Grid.Row="2" Grid.Column="1">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox Grid.Column="0" x:Name="txtScreenshotsPath" Text="{Binding ScreenshotsPath}" Margin="0,8,8,8" IsEnabled="{Binding SaveScreenshots}"/>
+                                        <Button Grid.Column="1" x:Name="btnBrowse" Content="浏览..." Click="btnBrowse_Click" IsEnabled="{Binding SaveScreenshots}"/>
+                                    </Grid>
+                                </Grid>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <GroupBox Header="警报设置" Margin="0,8,0,8" Style="{StaticResource MaterialDesignGroupBox}">
+                            <StackPanel Margin="8">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="危险阈值(1-10):" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                                    <Slider Grid.Row="0" Grid.Column="1" x:Name="sliderDangerThreshold" Minimum="1" Maximum="10" Value="{Binding DangerAlertThreshold}" Margin="0,8,0,8" TickFrequency="1" IsSnapToTickEnabled="True" TickPlacement="BottomRight"/>
+                                </Grid>
+                            </StackPanel>
+                        </GroupBox>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- 模拟器设置 -->
+            <TabItem Header="模拟器设置">
+                <Grid Margin="8">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <DataGrid Grid.Row="0" x:Name="dgEmulators" ItemsSource="{Binding Emulators}" AutoGenerateColumns="False" CanUserAddRows="False" Margin="0,8,0,8">
+                        <DataGrid.Columns>
+                            <DataGridCheckBoxColumn Header="启用" Binding="{Binding Enabled}" Width="60"/>
+                            <DataGridTextColumn Header="名称" Binding="{Binding Name}" Width="150"/>
+                            <DataGridTextColumn Header="窗口标题" Binding="{Binding WindowTitle}" Width="200"/>
+                            <DataGridTextColumn Header="索引" Binding="{Binding Index}" Width="60"/>
+                            <DataGridTemplateColumn Header="区域设置" Width="120">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Content="设置区域" Click="btnSetRegions_Click" Tag="{Binding Index}" Margin="4"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Left">
+                        <Button x:Name="btnAddEmulator" Content="添加模拟器" Click="btnAddEmulator_Click" Margin="0,0,8,0"/>
+                        <Button x:Name="btnRemoveEmulator" Content="删除模拟器" Click="btnRemoveEmulator_Click"/>
+                    </StackPanel>
+                </Grid>
+            </TabItem>
+
+            <!-- 警报服务 -->
+            <TabItem Header="警报服务">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="8">
+                        <GroupBox Header="钉钉机器人设置" Margin="0,8,0,8" Style="{StaticResource MaterialDesignGroupBox}">
+                            <StackPanel Margin="8">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="启用钉钉警报:" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                                    <CheckBox Grid.Row="0" Grid.Column="1" x:Name="chkEnableDingTalk" IsChecked="{Binding EnableDingTalkAlerts}" Margin="0,8,0,8"/>
+
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Webhook URL:" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                                    <TextBox Grid.Row="1" Grid.Column="1" x:Name="txtWebhookUrl" Text="{Binding DingTalkWebhookUrl}" Margin="0,8,0,8" IsEnabled="{Binding EnableDingTalkAlerts}"/>
+
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="加签密钥:" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                                    <PasswordBox Grid.Row="2" Grid.Column="1" x:Name="txtDingTalkSecret" Margin="0,8,0,8" IsEnabled="{Binding EnableDingTalkAlerts}" PasswordChanged="txtDingTalkSecret_PasswordChanged"/>
+                                </Grid>
+                                <Button x:Name="btnTestDingTalk" Content="测试钉钉警报" HorizontalAlignment="Left" Click="btnTestDingTalk_Click" IsEnabled="{Binding EnableDingTalkAlerts}" Margin="0,8,0,0"/>
+                            </StackPanel>
+                        </GroupBox>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+        </TabControl>
+
+        <!-- 底部按钮区域 -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+            <Button x:Name="btnCancel" Content="取消" Style="{StaticResource MaterialDesignOutlinedButton}" Margin="0,0,8,0" Click="btnCancel_Click"/>
+            <Button x:Name="btnSave" Content="保存" Click="btnSave_Click"/>
+        </StackPanel>
+    </Grid>
+</Window> 

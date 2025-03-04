@@ -1,144 +1,131 @@
-# EVEMonitor
+# EVE屏幕监控警报系统
 
-[![Python Tests](https://github.com/dantes14/EVEMonitor/actions/workflows/test.yml/badge.svg)](https://github.com/dantes14/EVEMonitor/actions/workflows/test.yml)
-[![Codecov](https://codecov.io/gh/dantes14/EVEMonitor/branch/main/graph/badge.svg)](https://codecov.io/gh/dantes14/EVEMonitor)
-[![PyPI version](https://badge.fury.io/py/evemonitor.svg)](https://badge.fury.io/py/evemonitor)
-[![Python Versions](https://img.shields.io/pypi/pyversions/evemonitor.svg)](https://pypi.org/project/evemonitor/)
-[![License](https://img.shields.io/github/license/dantes14/EVEMonitor.svg)](https://github.com/dantes14/EVEMonitor/blob/main/LICENSE)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+EVE屏幕监控警报系统是一个专为EVE Online玩家设计的工具，能够实时监控游戏中的危险情况并发送警报。系统通过截取游戏屏幕，使用OCR技术识别屏幕上的信息，分析是否存在危险情况，并在必要时触发警报。
 
-EVE游戏监控工具 - 一个基于Python的EVE Online游戏监控工具，用于实时监控游戏画面并识别关键信息。
+## 主要功能
 
-## 功能特性
+- **实时截图分析**：定期捕获游戏屏幕，并进行分析
+- **多模拟器支持**：同时监控多个游戏窗口或模拟器
+- **危险舰船检测**：识别Local列表中的危险玩家
+- **系统名称识别**：识别当前所在星系
+- **钉钉警报推送**：当检测到危险情况时，通过钉钉机器人发送警报
+- **灵活配置管理**：提供界面化的配置管理，可调整监控参数
 
-- 🎮 支持多种监控模式
-  - 全屏监控
-  - 自定义区域监控
-  - 网格布局监控
-- 🔍 强大的OCR识别
-  - 支持PaddleOCR和Tesseract两种引擎
-  - 可配置的识别区域
-  - 多语言支持
-- 📊 数据分析和统计
-  - 实时数据采集
-  - 数据可视化
-  - 历史记录查询
-- 🔔 灵活的通知系统
-  - 支持多种通知方式
-  - 可自定义通知规则
-  - 通知优先级管理
-- 🎨 美观的用户界面
-  - 现代化的UI设计
-  - 深色/浅色主题
-  - 布局预览功能
+## 系统架构
 
-## 项目截图
+项目采用模块化设计，主要包含以下模块：
 
-### 主界面
-![主界面](screenshots/main_window.png)
+- **EVEMonitor.Core**：核心模块，定义接口和模型
+- **EVEMonitor.Capture**：屏幕捕获模块，负责获取屏幕截图
+- **EVEMonitor.ImageProcessing**：图像处理模块，处理和分析截图
+- **EVEMonitor.OCR**：OCR识别模块，识别图像中的文本
+- **EVEMonitor.Alert**：警报模块，发送警报通知
+- **EVEMonitor.UI**：用户界面模块，提供交互界面
 
-### OCR配置
-![OCR配置](screenshots/ocr_config.png)
+## 项目结构
 
-### 屏幕配置
-![屏幕配置](screenshots/screen_config.png)
-
-### 通知配置
-![通知配置](screenshots/notification_config.png)
-
-## 系统要求
-
-- Python 3.8+
-- Windows/macOS/Linux
-- 支持OpenGL的显卡（用于屏幕捕获）
-
-## 安装说明
-
-1. 克隆仓库
-```bash
-git clone https://github.com/dantes14/EVEMonitor.git
-cd EVEMonitor
+```
+EVEMonitor/
+├── src/
+│   ├── EVEMonitor.Alert/           # 警报服务实现
+│   ├── EVEMonitor.Capture/         # 屏幕捕获实现
+│   ├── EVEMonitor.Core/            # 核心接口与模型
+│   │   ├── Interfaces/             # 定义服务接口
+│   │   ├── Models/                 # 定义数据模型
+│   │   └── Services/               # 核心服务实现
+│   ├── EVEMonitor.ImageProcessing/ # 图像处理实现
+│   ├── EVEMonitor.OCR/             # OCR识别实现
+│   └── EVEMonitor.UI/              # 用户界面实现
+└── Doc/                            # 文档
 ```
 
-2. 创建虚拟环境（推荐）
-```bash
-python -m venv venv
-source venv/bin/activate  # Linux/macOS
-venv\Scripts\activate     # Windows
-```
+## 关键服务
 
-3. 安装依赖
-```bash
-pip install -r requirements.txt
-```
+- **ScreenCaptureService**：屏幕捕获服务，负责截取游戏窗口
+- **ImageProcessingService**：图像处理服务，负责处理和分割图像
+- **OcrService**：OCR服务，负责识别图像中的文本
+- **ConfigService**：配置服务，管理应用程序配置
+- **DingTalkAlertService**：钉钉警报服务，发送警报通知
+- **ScreenshotService**：截图服务，协调各个服务，管理整个监控流程
 
-4. 安装开发依赖（可选）
-```bash
-pip install -r requirements-dev.txt
-```
+## 使用指南
 
-## 使用方法
-
-1. 启动程序
-```bash
-python main.py
-```
-
-2. 配置监控设置
-   - 选择监控模式
-   - 配置OCR参数
-   - 设置通知规则
-
-3. 开始监控
-   - 点击"开始监控"按钮
-   - 程序会自动捕获屏幕并识别信息
+1. 启动应用程序
+2. 在设置中配置要监控的模拟器和窗口
+3. 设置截图间隔和其他参数
+4. 配置钉钉机器人（可选）
+5. 点击"开始监控"按钮启动监控
+6. 系统将自动捕获屏幕并分析，在检测到危险时发送警报
 
 ## 配置说明
 
-### OCR配置
-- 支持PaddleOCR和Tesseract两种引擎
-- 可配置识别区域和参数
-- 支持多语言识别
+通过"设置"按钮可以打开设置窗口，配置以下内容：
 
-### 通知配置
-- 支持多种通知方式
-- 可自定义通知规则
-- 支持通知优先级
+- **一般设置**：截图间隔、截图保存路径、危险阈值等
+- **模拟器设置**：添加、删除和配置模拟器
+- **警报服务**：钉钉机器人配置等
 
-### 界面配置
-- 支持深色/浅色主题
-- 可自定义布局
-- 支持布局预览
+## 技术栈
 
-## 开发计划
+- **.NET Framework**：应用程序框架
+- **WPF**：用户界面
+- **Material Design**：UI组件和样式
+- **Tesseract OCR**：文字识别
+- **OpenCV**：图像处理
 
-- [ ] 添加更多OCR引擎支持
-- [ ] 优化识别准确率
-- [ ] 添加数据分析功能
-- [ ] 支持更多通知方式
-- [ ] 添加插件系统
-- [ ] 提高测试覆盖率
-- [ ] 添加性能测试
-- [ ] 添加集成测试
-- [ ] 添加端到端测试
+## 注意事项
 
-## 贡献指南
+- 本工具仅用于辅助游戏，不得用于任何违反游戏规则的行为
+- OCR识别准确率受游戏界面和分辨率影响，可能需要调整参数以获得最佳效果
+- 建议在使用前先进行测试，确保工具能正确识别游戏界面
 
-欢迎提交Issue和Pull Request！详见[贡献指南](CONTRIBUTING.md)。
+## 系统要求
 
-在提交代码前，请确保：
-- 所有测试通过
-- 新功能包含相应的测试用例
-- 代码覆盖率不低于当前水平
-- 遵循项目的代码风格规范
-- 更新相关文档
+- **操作系统**：Windows 10 1803+ 或 Windows 11
+- **处理器**：双核心CPU 2.0GHz以上
+- **内存**：4GB RAM以上
+- **显卡**：支持DirectX 11
+- **.NET运行时**：.NET 6.0 Runtime或更高版本
+
+## 安装指南
+
+1. 确保您的系统满足上述系统要求
+2. 下载最新的发布版本
+3. 运行安装程序，按照向导完成安装
+4. 首次启动时，系统将引导您完成初始配置
+
+## 开发指南
+
+### 项目结构
+
+```
+EVEMonitor/
+├── src/
+│   ├── EVEMonitor.Core/            # 核心功能库
+│   ├── EVEMonitor.Capture/         # 屏幕捕获模块
+│   ├── EVEMonitor.ImageProcessing/ # 图像处理模块
+│   ├── EVEMonitor.OCR/             # OCR识别模块
+│   ├── EVEMonitor.Alert/           # 警报推送模块
+│   ├── EVEMonitor.Config/          # 配置管理模块
+│   └── EVEMonitor.UI/              # WPF用户界面
+├── tests/                          # 测试项目
+├── tools/                          # 辅助工具
+└── docs/                           # 文档
+```
+
+### 开发环境
+
+- Visual Studio 2022
+- .NET 6.0 SDK
+- Windows 10/11
+
+### 构建步骤
+
+1. 克隆仓库
+2. 使用Visual Studio打开`EVEMonitor.sln`
+3. 恢复NuGet包
+4. 构建解决方案
 
 ## 许可证
 
-本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情
-
-## 联系方式
-
-- 项目维护者: dantes14
-- 项目链接: [https://github.com/dantes14/EVEMonitor](https://github.com/dantes14/EVEMonitor)
-- 邮箱: dantes14@163.com
+本项目采用MIT许可证 

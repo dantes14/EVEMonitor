@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net6.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <ApplicationIcon>Resources\app.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Resources\app.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Resources\app.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MaterialDesignThemes" Version="4.5.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="6.0.0" />
+    <PackageReference Include="Serilog" Version="2.10.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\EVEMonitor.Alert\EVEMonitor.Alert.csproj" />
+    <ProjectReference Include="..\EVEMonitor.Capture\EVEMonitor.Capture.csproj" />
+    <ProjectReference Include="..\EVEMonitor.Config\EVEMonitor.Config.csproj" />
+    <ProjectReference Include="..\EVEMonitor.Core\EVEMonitor.Core.csproj" />
+    <ProjectReference Include="..\EVEMonitor.ImageProcessing\EVEMonitor.ImageProcessing.csproj" />
+    <ProjectReference Include="..\EVEMonitor.OCR\EVEMonitor.OCR.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Resources\" />
+    <Folder Include="ViewModels\" />
+    <Folder Include="Views\" />
+  </ItemGroup>
+
+</Project> 
