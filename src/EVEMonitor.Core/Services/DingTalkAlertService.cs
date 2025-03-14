@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
@@ -6,6 +7,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using EVEMonitor.Core.Interfaces;
 using EVEMonitor.Core.Models;
+using Microsoft.Extensions.Logging;
 
 namespace EVEMonitor.Core.Services
 {
@@ -14,19 +16,29 @@ namespace EVEMonitor.Core.Services
     /// </summary>
     public class DingTalkAlertService : IAlertService
     {
-        private readonly ILogger _logger;
+        private readonly ILogger<DingTalkAlertService> _logger;
         private readonly IConfigService _configService;
         private readonly HttpClient _httpClient;
         private readonly object _lockObject = new object();
         private DateTime _lastAlertTime = DateTime.MinValue;
         private readonly TimeSpan _minimumAlertInterval = TimeSpan.FromSeconds(10);
+        private string _webhookUrl = string.Empty;
+
+        /// <summary>
+        /// 钉钉Webhook URL
+        /// </summary>
+        public string WebhookUrl
+        {
+            get => _webhookUrl;
+            set => _webhookUrl = value;
+        }
 
         /// <summary>
         /// 构造函数
         /// </summary>
         /// <param name="logger">日志服务</param>
         /// <param name="configService">配置服务</param>
-        public DingTalkAlertService(ILogger logger, IConfigService configService)
+        public DingTalkAlertService(ILogger<DingTalkAlertService> logger, IConfigService configService)
         {
             _logger = logger;
             _configService = configService;
@@ -35,8 +47,42 @@ namespace EVEMonitor.Core.Services
                 Timeout = TimeSpan.FromSeconds(10)
             };
 
+            // 从配置中获取Webhook URL
+            if (_configService.CurrentConfig != null)
+            {
+                WebhookUrl = _configService.CurrentConfig.DingTalkWebhookUrl;
+            }
+
             // 订阅配置变更事件
             _configService.ConfigChanged += OnConfigChanged;
+        }
+
+        /// <summary>
+        /// 推送舰船警报
+        /// </summary>
+        /// <param name="systemName">星系名称</param>
+        /// <param name="ships">舰船信息列表</param>
+        /// <param name="emulatorIndex">模拟器索引</param>
+        /// <returns>推送是否成功</returns>
+        public async Task<bool> PushShipAlertAsync(string systemName, List<ShipInfo> ships, int emulatorIndex)
+        {
+            if (ships == null || ships.Count == 0)
+            {
+                _logger?.LogWarning("舰船信息列表为空");
+                return false;
+            }
+
+            var alertData = new AlertData
+            {
+                Title = $"危险舰船警报 - 模拟器 {emulatorIndex + 1}",
+                Message = $"在星系 {systemName} 中发现 {ships.Count} 艘危险舰船",
+                AlertType = AlertType.DangerousShip,
+                AdditionalData = ships[0], // 取第一个舰船作为主要信息
+                SystemName = systemName,
+                Timestamp = DateTime.Now
+            };
+
+            return await PushAlertAsync(alertData);
         }
 
         /// <summary>
@@ -147,7 +193,7 @@ namespace EVEMonitor.Core.Services
         {
             string title = alertData.Title;
             StringBuilder content = new StringBuilder();
-            
+
             content.AppendLine($"### {title}");
             content.AppendLine($"#### 时间：{alertData.Timestamp:yyyy-MM-dd HH:mm:ss}");
             content.AppendLine($"#### 消息：{alertData.Message}");
@@ -219,9 +265,15 @@ namespace EVEMonitor.Core.Services
         /// <summary>
         /// 配置变更事件处理
         /// </summary>
-        private void OnConfigChanged(object sender, ConfigChangedEventArgs e)
+        private void OnConfigChanged(object? sender, ConfigChangedEventArgs e)
         {
-            _logger?.LogInformation("检测到配置变更，更新钉钉警报服务配置");
+            if (e.Config == null)
+                return;
+
+            lock (_lockObject)
+            {
+                WebhookUrl = e.Config.DingTalkWebhookUrl;
+            }
         }
 
         /// <summary>
@@ -233,4 +285,4 @@ namespace EVEMonitor.Core.Services
             _httpClient.Dispose();
         }
     }
-} 
+}

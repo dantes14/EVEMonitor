@@ -1,0 +1,21 @@
+{
+  "DangerousShipTypes": [
+    "泰坦",
+    "超级航母",
+    "无畏舰",
+    "战列舰",
+    "重型突击舰",
+    "战略巡洋舰"
+  ],
+  "DangerousCorporations": [
+    "黑军团",
+    "死亡军团",
+    "猎杀者联盟",
+    "虫洞居民"
+  ],
+  "DangerousAlliances": [
+    "PL",
+    "NC.",
+    "DARKNESS"
+  ]
+} 

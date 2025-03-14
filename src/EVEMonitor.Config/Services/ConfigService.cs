@@ -1,4 +1,6 @@
+using System;
 using System.IO;
+using System.Text.Json;
 using EVEMonitor.Core.Interfaces;
 using EVEMonitor.Core.Models;
 
@@ -9,15 +11,16 @@ namespace EVEMonitor.Config.Services
     /// </summary>
     public class ConfigService : IConfigService, IDisposable
     {
-        private AppConfig _currentConfig;
-        private FileSystemWatcher _fileWatcher;
-        private readonly object _lockObject = new object();
-        private bool _isWatching = false;
+        private string _configFilePath = string.Empty;
+        private readonly JsonSerializerOptions _jsonOptions;
+        private AppConfig _currentConfig = new();
+        private FileSystemWatcher? _fileWatcher;
+        private bool _disposed;
 
         /// <summary>
-        /// 配置文件路径
+        /// 配置变更事件
         /// </summary>
-        public string ConfigFilePath { get; set; }
+        public event EventHandler<ConfigChangedEventArgs> ConfigChanged = delegate { };
 
         /// <summary>
         /// 当前配置
@@ -25,50 +28,58 @@ namespace EVEMonitor.Config.Services
         public AppConfig CurrentConfig => _currentConfig;
 
         /// <summary>
-        /// 配置变更事件
+        /// 配置文件路径
         /// </summary>
-        public event EventHandler<ConfigChangedEventArgs> ConfigChanged;
+        public string ConfigFilePath
+        {
+            get => _configFilePath;
+            set
+            {
+                if (string.IsNullOrEmpty(value))
+                    throw new ArgumentNullException(nameof(value));
+
+                if (_configFilePath != value)
+                {
+                    _configFilePath = value;
+                    StopWatchingConfigChanges();
+                    InitializeFileWatcher();
+                    LoadConfig();
+                }
+            }
+        }
 
         /// <summary>
-        /// 初始化配置管理服务
+        /// 初始化配置服务
         /// </summary>
         /// <param name="configFilePath">配置文件路径</param>
-        public ConfigService(string configFilePath = "config.json")
+        public ConfigService(string configFilePath)
         {
+            if (string.IsNullOrEmpty(configFilePath))
+                throw new ArgumentNullException(nameof(configFilePath));
+
+            _jsonOptions = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                WriteIndented = true
+            };
+
             ConfigFilePath = configFilePath;
-            _currentConfig = LoadConfig();
         }
 
         /// <summary>
         /// 加载配置
         /// </summary>
-        /// <returns>加载的配置</returns>
+        /// <returns>配置对象</returns>
         public AppConfig LoadConfig()
         {
-            try
-            {
-                if (!File.Exists(ConfigFilePath))
-                {
-                    var defaultConfig = AppConfig.CreateDefault();
-                    SaveConfig(defaultConfig);
-                    return defaultConfig;
-                }
-
-                string json = File.ReadAllText(ConfigFilePath);
-                var config = AppConfig.FromJson(json);
-                return config;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"加载配置失败: {ex.Message}");
-                return AppConfig.CreateDefault();
-            }
+            _currentConfig = LoadConfigInternal() ?? new AppConfig();
+            return _currentConfig;
         }
 
         /// <summary>
         /// 保存配置
         /// </summary>
-        /// <param name="config">要保存的配置</param>
+        /// <param name="config">配置对象</param>
         /// <returns>保存是否成功</returns>
         public bool SaveConfig(AppConfig config)
         {
@@ -77,35 +88,14 @@ namespace EVEMonitor.Config.Services
 
             try
             {
-                // 确保目录存在
-                string directory = Path.GetDirectoryName(ConfigFilePath);
-                if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
-                {
-                    Directory.CreateDirectory(directory);
-                }
-
-                // 暂停文件监视以避免触发自己的事件
-                bool wasWatching = _isWatching;
-                if (wasWatching)
-                {
-                    StopWatchingConfigChanges();
-                }
-
-                // 保存配置
-                string json = config.ToJson();
-                File.WriteAllText(ConfigFilePath, json);
-
-                // 恢复文件监视
-                if (wasWatching)
-                {
-                    WatchConfigChanges();
-                }
-
+                var json = JsonSerializer.Serialize(config, _jsonOptions);
+                File.WriteAllText(_configFilePath, json);
+                _currentConfig = config;
+                OnConfigChanged();
                 return true;
             }
-            catch (Exception ex)
+            catch
             {
-                Console.WriteLine($"保存配置失败: {ex.Message}");
                 return false;
             }
         }
@@ -113,118 +103,114 @@ namespace EVEMonitor.Config.Services
         /// <summary>
         /// 更新配置
         /// </summary>
-        /// <param name="config">新的配置</param>
+        /// <param name="config">配置对象</param>
         public void UpdateConfig(AppConfig config)
         {
             if (config == null)
                 return;
 
-            lock (_lockObject)
-            {
-                _currentConfig = config;
-                SaveConfig(config);
-                OnConfigChanged(config);
-            }
+            _currentConfig = config;
+            SaveConfig(config);
+            OnConfigChanged();
         }
 
         /// <summary>
-        /// 监听配置文件变更
+        /// 开始监视配置变更
         /// </summary>
         public void WatchConfigChanges()
         {
-            if (_isWatching)
-                return;
-
-            try
-            {
-                string directory = Path.GetDirectoryName(ConfigFilePath) ?? ".";
-                string filename = Path.GetFileName(ConfigFilePath);
-
-                _fileWatcher = new FileSystemWatcher(directory, filename)
-                {
-                    NotifyFilter = NotifyFilters.LastWrite,
-                    EnableRaisingEvents = true
-                };
-
-                _fileWatcher.Changed += OnFileChanged;
-                _isWatching = true;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"启动配置监视失败: {ex.Message}");
-            }
+            InitializeFileWatcher();
         }
 
         /// <summary>
-        /// 停止监听配置文件变更
+        /// 停止监视配置变更
         /// </summary>
         public void StopWatchingConfigChanges()
         {
-            if (!_isWatching || _fileWatcher == null)
-                return;
-
-            try
+            if (_fileWatcher != null)
             {
-                _fileWatcher.Changed -= OnFileChanged;
                 _fileWatcher.EnableRaisingEvents = false;
+                _fileWatcher.Changed -= OnConfigFileChanged;
                 _fileWatcher.Dispose();
                 _fileWatcher = null;
-                _isWatching = false;
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"停止配置监视失败: {ex.Message}");
-            }
-        }
-
-        /// <summary>
-        /// 文件变更处理
-        /// </summary>
-        private void OnFileChanged(object sender, FileSystemEventArgs e)
-        {
-            // 由于FileSystemWatcher可能会多次触发，所以需要延迟处理并去重
-            Task.Delay(500).ContinueWith(_ =>
-            {
-                try
-                {
-                    lock (_lockObject)
-                    {
-                        var newConfig = LoadConfig();
-                        if (newConfig != null && !AreConfigsEqual(_currentConfig, newConfig))
-                        {
-                            _currentConfig = newConfig;
-                            OnConfigChanged(newConfig);
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"处理配置变更失败: {ex.Message}");
-                }
-            });
         }
 
         /// <summary>
         /// 触发配置变更事件
         /// </summary>
-        /// <param name="config">新配置</param>
-        private void OnConfigChanged(AppConfig config)
+        protected virtual void OnConfigChanged()
         {
-            ConfigChanged?.Invoke(this, new ConfigChangedEventArgs(config));
+            ConfigChanged?.Invoke(this, new ConfigChangedEventArgs(_currentConfig));
         }
 
         /// <summary>
-        /// 比较两个配置是否相同
+        /// 初始化文件监视器
         /// </summary>
-        /// <param name="config1">配置1</param>
-        /// <param name="config2">配置2</param>
-        /// <returns>是否相同</returns>
-        private bool AreConfigsEqual(AppConfig config1, AppConfig config2)
+        private void InitializeFileWatcher()
         {
-            if (config1 == null || config2 == null)
-                return config1 == config2;
+            if (_fileWatcher != null)
+            {
+                _fileWatcher.Dispose();
+            }
 
-            // 简单比较JSON
+            var directory = Path.GetDirectoryName(_configFilePath);
+            if (string.IsNullOrEmpty(directory))
+                return;
+
+            _fileWatcher = new FileSystemWatcher(directory)
+            {
+                Filter = Path.GetFileName(_configFilePath),
+                NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size
+            };
+
+            _fileWatcher.Changed += OnConfigFileChanged;
+            _fileWatcher.EnableRaisingEvents = true;
+        }
+
+        /// <summary>
+        /// 配置文件变更处理
+        /// </summary>
+        private void OnConfigFileChanged(object sender, FileSystemEventArgs e)
+        {
+            var newConfig = LoadConfigInternal();
+            if (newConfig != null && !AreConfigsEqual(_currentConfig, newConfig))
+            {
+                _currentConfig = newConfig;
+                OnConfigChanged();
+            }
+        }
+
+        /// <summary>
+        /// 加载配置文件
+        /// </summary>
+        private AppConfig? LoadConfigInternal()
+        {
+            try
+            {
+                if (!File.Exists(_configFilePath))
+                    return null;
+
+                var json = File.ReadAllText(_configFilePath);
+                return AppConfig.FromJson(json);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// 比较两个配置对象是否相等
+        /// </summary>
+        private static bool AreConfigsEqual(AppConfig? config1, AppConfig? config2)
+        {
+            if (ReferenceEquals(config1, config2))
+                return true;
+
+            if (config1 == null || config2 == null)
+                return false;
+
             return config1.ToJson() == config2.ToJson();
         }
 
@@ -233,8 +219,12 @@ namespace EVEMonitor.Config.Services
         /// </summary>
         public void Dispose()
         {
-            StopWatchingConfigChanges();
+            if (!_disposed)
+            {
+                StopWatchingConfigChanges();
+                _disposed = true;
+            }
             GC.SuppressFinalize(this);
         }
     }
-} 
+}

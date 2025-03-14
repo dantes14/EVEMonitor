@@ -57,7 +57,21 @@ namespace EVEMonitor.Core.Interfaces
         /// <summary>
         /// 截图分析完成事件
         /// </summary>
-        event EventHandler<ScreenshotAnalysisEventArgs> ScreenshotAnalysisCompleted;
+        event EventHandler<ScreenshotAnalysisEventArgs>? ScreenshotAnalysisCompleted;
+
+        /// <summary>
+        /// 异步截取指定模拟器的屏幕
+        /// </summary>
+        /// <param name="emulatorName">模拟器名称</param>
+        /// <returns>截图</returns>
+        Task<Bitmap?> TakeScreenshotAsync(string emulatorName);
+
+        /// <summary>
+        /// 异步提取系统名称区域
+        /// </summary>
+        /// <param name="emulatorIndex">模拟器索引</param>
+        /// <returns>系统名称区域</returns>
+        Task<RegionOfInterest> ExtractSystemNameRegionAsync(int emulatorIndex);
     }
 
     /// <summary>
@@ -86,4 +100,4 @@ namespace EVEMonitor.Core.Interfaces
             EmulatorIndex = emulatorIndex;
         }
     }
-} 
+}

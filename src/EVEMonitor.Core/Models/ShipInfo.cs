@@ -1,3 +1,4 @@
+using System;
 using System.Drawing;
 
 namespace EVEMonitor.Core.Models
@@ -15,17 +16,26 @@ namespace EVEMonitor.Core.Models
         /// <summary>
         /// 舰船名称
         /// </summary>
-        public string Name { get; set; }
+        public string Name { get; set; } = string.Empty;
 
         /// <summary>
         /// 舰船类型
         /// </summary>
-        public string Type { get; set; }
+        public string Type { get; set; } = string.Empty;
+
+        /// <summary>
+        /// 舰船类型（别名，与Type保持一致）
+        /// </summary>
+        public string ShipType
+        {
+            get => Type;
+            set => Type = value;
+        }
 
         /// <summary>
         /// 舰船所属联盟/公司
         /// </summary>
-        public string Corporation { get; set; }
+        public string Corporation { get; set; } = string.Empty;
 
         /// <summary>
         /// 舰船在截图中的位置
@@ -121,4 +131,4 @@ namespace EVEMonitor.Core.Models
         /// </summary>
         Friendly
     }
-} 
+}

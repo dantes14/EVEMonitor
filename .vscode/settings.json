@@ -1,0 +1,33 @@
+{
+    "files.exclude": {
+        "**/bin": true,
+        "**/obj": true
+    },
+    "editor.formatOnSave": true,
+    "dotnet.defaultSolution": "EVEMonitor.sln",
+    "csharp.format.enable": true,
+    "csharp.semanticHighlighting.enabled": true,
+    "omnisharp.enableRoslynAnalyzers": true,
+    "omnisharp.enableEditorConfigSupport": true,
+    "omnisharp.useModernNet": true,
+    "explorer.fileNesting.enabled": true,
+    "explorer.fileNesting.patterns": {
+        "*.cs": "${capture}.Designer.cs, ${capture}.resx",
+        "*.csproj": "*.config, *.props, *.targets",
+        "*.xaml": "*.xaml.cs"
+    },
+    "[csharp]": {
+        "editor.defaultFormatter": "ms-dotnettools.csharp",
+        "editor.insertSpaces": true,
+        "editor.tabSize": 4
+    },
+    "[xml]": {
+        "editor.defaultFormatter": "DotJoshJohnson.xml",
+        "editor.insertSpaces": true,
+        "editor.tabSize": 2
+    },
+    "[json]": {
+        "editor.insertSpaces": true,
+        "editor.tabSize": 2
+    }
+}

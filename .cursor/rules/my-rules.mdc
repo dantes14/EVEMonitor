@@ -1,0 +1,16 @@
+---
+description: 复杂任务分步处理规则
+globs: 
+alwaysApply: false
+---
+
+# Your rule content
+
+- You can @ files here
+- You can use markdown but dont have to
+
+## 复杂任务分步处理规则
+- 当用户请求的代码量超过 50 行或涉及多个文件时，自动拆解任务为以下步骤：
+  1. 先完成核心功能模块
+  2. 再补充辅助函数
+  3. 最后处理异常和边界条件

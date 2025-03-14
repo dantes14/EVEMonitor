@@ -1,86 +1,145 @@
+using System;
+using System.Collections.Concurrent;
 using System.Drawing;
+using System.Runtime.Versioning;
+using System.Threading.Tasks;
 using System.Threading.Channels;
 
 namespace EVEMonitor.Core.Utils
 {
     /// <summary>
-    /// 截图队列类，用于管理截图数据的缓存和顺序处理
+    /// 截图队列，用于在多线程环境下安全地管理截图
     /// </summary>
-    public class ScreenshotQueue
+    [SupportedOSPlatform("windows")]
+    public class ScreenshotQueue : IDisposable
     {
+        private readonly ConcurrentQueue<Bitmap> _queue = new ConcurrentQueue<Bitmap>();
+        private readonly object _lockObject = new object();
+        private readonly int _maxCapacity;
         private readonly Channel<Bitmap> _channel;
-        private readonly int _capacity;
+
+        /// <summary>
+        /// 队列中的项目数量
+        /// </summary>
+        public int Count => _queue.Count;
 
         /// <summary>
         /// 初始化截图队列
         /// </summary>
-        /// <param name="capacity">队列容量</param>
-        public ScreenshotQueue(int capacity = 10)
+        public ScreenshotQueue()
         {
-            _capacity = capacity;
-            var options = new BoundedChannelOptions(capacity)
+            _maxCapacity = 20; // 默认容量
+            _channel = Channel.CreateUnbounded<Bitmap>(new UnboundedChannelOptions
             {
-                FullMode = BoundedChannelFullMode.Wait,
                 SingleReader = true,
-                SingleWriter = false
-            };
-            _channel = Channel.CreateBounded<Bitmap>(options);
+                SingleWriter = true
+            });
         }
 
         /// <summary>
-        /// 获取当前队列长度
+        /// 初始化截图队列
         /// </summary>
-        public int Count => _channel.Reader.Count;
-
-        /// <summary>
-        /// 添加截图到队列
-        /// </summary>
-        /// <param name="screenshot">截图</param>
-        /// <param name="cancellationToken">取消令牌</param>
-        /// <returns>添加操作的任务</returns>
-        public async ValueTask EnqueueAsync(Bitmap screenshot, CancellationToken cancellationToken = default)
+        /// <param name="maxCapacity">最大容量</param>
+        public ScreenshotQueue(int maxCapacity)
         {
-            if (screenshot == null) throw new ArgumentNullException(nameof(screenshot));
-
-            await _channel.Writer.WriteAsync(screenshot, cancellationToken);
+            _maxCapacity = maxCapacity;
+            _channel = Channel.CreateUnbounded<Bitmap>(new UnboundedChannelOptions
+            {
+                SingleReader = true,
+                SingleWriter = true
+            });
         }
 
         /// <summary>
-        /// 从队列获取截图
+        /// 清空队列
         /// </summary>
-        /// <param name="cancellationToken">取消令牌</param>
-        /// <returns>截图</returns>
-        public async ValueTask<Bitmap> DequeueAsync(CancellationToken cancellationToken = default)
+        [SupportedOSPlatform("windows")]
+        public void Clear()
         {
-            return await _channel.Reader.ReadAsync(cancellationToken);
+            while (_queue.TryDequeue(out Bitmap? bitmap))
+            {
+                bitmap?.Dispose();
+            }
         }
 
         /// <summary>
-        /// 尝试从队列获取截图
+        /// 将图像添加到队列
         /// </summary>
-        /// <param name="screenshot">输出的截图</param>
+        /// <param name="bitmap">要添加的位图</param>
+        [SupportedOSPlatform("windows")]
+        public void Enqueue(Bitmap bitmap)
+        {
+            if (bitmap == null)
+                return;
+
+            // 队列过长时删除旧的截图
+            if (_queue.Count > _maxCapacity)
+            {
+                while (_queue.Count > _maxCapacity / 2 && _queue.TryDequeue(out Bitmap? oldBitmap))
+                {
+                    oldBitmap?.Dispose();
+                }
+            }
+
+            // 添加图像的副本到队列
+            _queue.Enqueue((Bitmap)bitmap.Clone());
+        }
+
+        /// <summary>
+        /// 异步将图像添加到队列
+        /// </summary>
+        /// <param name="bitmap">要添加的位图</param>
+        [SupportedOSPlatform("windows")]
+        public Task EnqueueAsync(Bitmap bitmap)
+        {
+            Enqueue(bitmap);
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// 尝试从队列获取一个截图
+        /// </summary>
+        /// <param name="bitmap">获取的截图</param>
         /// <returns>是否成功获取</returns>
-        public bool TryDequeue(out Bitmap screenshot)
+        [SupportedOSPlatform("windows")]
+        public bool TryDequeue(out Bitmap? bitmap)
         {
-            return _channel.Reader.TryRead(out screenshot);
+            if (_queue.TryDequeue(out bitmap))
+            {
+                return true;
+            }
+            return false;
         }
 
         /// <summary>
-        /// 完成写入
+        /// 异步从队列获取一个截图
+        /// </summary>
+        /// <returns>获取的截图，如果队列为空则返回null</returns>
+        [SupportedOSPlatform("windows")]
+        public Task<Bitmap?> DequeueAsync()
+        {
+            if (TryDequeue(out Bitmap? bitmap))
+            {
+                return Task.FromResult(bitmap);
+            }
+            return Task.FromResult<Bitmap?>(null);
+        }
+
+        /// <summary>
+        /// 完成队列处理
         /// </summary>
         public void Complete()
         {
-            _channel.Writer.Complete();
+            // 标记队列处理完成
         }
 
         /// <summary>
-        /// 队列是否为空
+        /// 释放所有资源
         /// </summary>
-        public bool IsEmpty => _channel.Reader.Count == 0;
-
-        /// <summary>
-        /// 队列是否已满
-        /// </summary>
-        public bool IsFull => _channel.Reader.Count >= _capacity;
+        [SupportedOSPlatform("windows")]
+        public void Dispose()
+        {
+            Clear();
+        }
     }
-} 
+}

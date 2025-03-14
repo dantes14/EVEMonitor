@@ -6,6 +6,42 @@ using EVEMonitor.Core.Interfaces;
 namespace EVEMonitor.Core.Services
 {
     /// <summary>
+    /// 日志级别
+    /// </summary>
+    public enum LogLevel
+    {
+        /// <summary>
+        /// 跟踪
+        /// </summary>
+        Trace = 0,
+
+        /// <summary>
+        /// 调试
+        /// </summary>
+        Debug = 1,
+
+        /// <summary>
+        /// 信息
+        /// </summary>
+        Information = 2,
+
+        /// <summary>
+        /// 警告
+        /// </summary>
+        Warning = 3,
+
+        /// <summary>
+        /// 错误
+        /// </summary>
+        Error = 4,
+
+        /// <summary>
+        /// 严重错误
+        /// </summary>
+        Critical = 5
+    }
+
+    /// <summary>
     /// 日志服务实现
     /// </summary>
     public class Logger : ILogger
@@ -20,10 +56,10 @@ namespace EVEMonitor.Core.Services
         /// </summary>
         /// <param name="logFilePath">日志文件路径</param>
         /// <param name="minLogLevel">最低日志级别</param>
-        public Logger(string logFilePath = null, LogLevel minLogLevel = LogLevel.Information)
+        public Logger(string? logFilePath = null, LogLevel minLogLevel = LogLevel.Information)
         {
             _minLogLevel = minLogLevel;
-            
+
             if (string.IsNullOrEmpty(logFilePath))
             {
                 string logDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Logs");
@@ -31,24 +67,24 @@ namespace EVEMonitor.Core.Services
                 {
                     Directory.CreateDirectory(logDirectory);
                 }
-                
+
                 _logFilePath = Path.Combine(logDirectory, $"EVEMonitor_{DateTime.Now:yyyyMMdd}.log");
             }
             else
             {
                 _logFilePath = logFilePath;
-                
-                string logDirectory = Path.GetDirectoryName(_logFilePath);
+
+                string? logDirectory = Path.GetDirectoryName(_logFilePath);
                 if (!string.IsNullOrEmpty(logDirectory) && !Directory.Exists(logDirectory))
                 {
                     Directory.CreateDirectory(logDirectory);
                 }
             }
-            
+
             // 添加默认的文件日志输出
             AddLogOutput(new FileLogOutput(_logFilePath));
-            
-            // 添加控制台日志输出（如果在控制台应用程序中）
+
+            // 如果是交互式环境，添加控制台日志输出
             if (Environment.UserInteractive)
             {
                 AddLogOutput(new ConsoleLogOutput());
@@ -65,7 +101,7 @@ namespace EVEMonitor.Core.Services
             {
                 return;
             }
-            
+
             lock (_lockObject)
             {
                 _logOutputs.Add(logOutput);
@@ -82,7 +118,7 @@ namespace EVEMonitor.Core.Services
             {
                 return;
             }
-            
+
             lock (_lockObject)
             {
                 _logOutputs.Remove(logOutput);
@@ -148,20 +184,53 @@ namespace EVEMonitor.Core.Services
         /// </summary>
         /// <param name="level">日志级别</param>
         /// <param name="message">日志消息</param>
-        private void Log(LogLevel level, string message)
+        /// <param name="ex">异常信息</param>
+        public void Log(LogLevel level, string message, Exception? ex = null)
         {
             if (level < _minLogLevel)
-            {
                 return;
+
+            if (ex != null)
+            {
+                message = $"{message}\n异常: {ex.Message}\n堆栈: {ex.StackTrace}";
             }
-            
+
             var logEntry = new LogEntry
             {
                 Level = level,
                 Message = message,
                 Timestamp = DateTime.Now
             };
-            
+
+            // 通知所有日志输出
+            OnLogAdded(logEntry);
+
+            // 输出到文件
+            if (!string.IsNullOrEmpty(_logFilePath))
+            {
+                try
+                {
+                    WriteToFile(logEntry);
+                }
+                catch (Exception fileEx)
+                {
+                    // 如果写入文件失败，输出到控制台
+                    if (Environment.UserInteractive)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine($"写入日志文件失败: {fileEx.Message}");
+                        Console.ResetColor();
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// 通知日志输出
+        /// </summary>
+        /// <param name="logEntry">日志条目</param>
+        protected virtual void OnLogAdded(LogEntry logEntry)
+        {
             lock (_lockObject)
             {
                 foreach (var output in _logOutputs)
@@ -176,6 +245,16 @@ namespace EVEMonitor.Core.Services
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// 写入日志到文件
+        /// </summary>
+        /// <param name="logEntry">日志条目</param>
+        private void WriteToFile(LogEntry logEntry)
+        {
+            string logLine = $"{logEntry.Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{logEntry.Level}] {logEntry.Message}";
+            File.AppendAllText(_logFilePath, logLine + Environment.NewLine);
         }
     }
 
@@ -205,7 +284,7 @@ namespace EVEMonitor.Core.Services
             try
             {
                 string logLine = $"{logEntry.Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{logEntry.Level}] {logEntry.Message}";
-                
+
                 lock (_lockObject)
                 {
                     File.AppendAllText(_filePath, logLine + Environment.NewLine);
@@ -243,9 +322,9 @@ namespace EVEMonitor.Core.Services
             {
                 ConsoleColor originalColor = Console.ForegroundColor;
                 Console.ForegroundColor = LogColors.ContainsKey(logEntry.Level) ? LogColors[logEntry.Level] : originalColor;
-                
+
                 Console.WriteLine($"{logEntry.Timestamp:HH:mm:ss.fff} [{logEntry.Level}] {logEntry.Message}");
-                
+
                 Console.ForegroundColor = originalColor;
             }
             catch
@@ -264,16 +343,24 @@ namespace EVEMonitor.Core.Services
         /// 日志级别
         /// </summary>
         public LogLevel Level { get; set; }
-        
+
         /// <summary>
         /// 日志消息
         /// </summary>
-        public string Message { get; set; }
-        
+        public required string Message { get; set; }
+
         /// <summary>
         /// 日志时间戳
         /// </summary>
         public DateTime Timestamp { get; set; }
+
+        /// <summary>
+        /// 初始化日志条目
+        /// </summary>
+        public LogEntry()
+        {
+            Timestamp = DateTime.Now;
+        }
     }
 
     /// <summary>
@@ -287,4 +374,4 @@ namespace EVEMonitor.Core.Services
         /// <param name="logEntry">日志条目</param>
         void WriteLog(LogEntry logEntry);
     }
-} 
+}

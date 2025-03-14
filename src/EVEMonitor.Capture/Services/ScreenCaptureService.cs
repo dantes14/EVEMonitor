@@ -4,35 +4,58 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using System.Runtime.Versioning;
+using System.Windows.Forms;
+using Timer = System.Timers.Timer;
+using ElapsedEventArgs = System.Timers.ElapsedEventArgs;
 using EVEMonitor.Core.Interfaces;
 using EVEMonitor.Core.Models;
+using Microsoft.Extensions.Logging;
 
 namespace EVEMonitor.Capture.Services
 {
     /// <summary>
     /// 屏幕捕获服务实现
     /// </summary>
-    public class ScreenCaptureService : IScreenCaptureService
+    [SupportedOSPlatform("windows")]
+    public class ScreenCaptureService : IScreenCaptureService, IDisposable
     {
-        private readonly ILogger _logger;
+        private readonly ILogger<ScreenCaptureService> _logger;
         private readonly Timer _captureTimer;
         private bool _isCapturing = false;
         private bool _disposed = false;
-
-        /// <summary>
-        /// 捕获区域
-        /// </summary>
-        public Rectangle CaptureRegion { get; set; }
-
-        /// <summary>
-        /// 捕获间隔(毫秒)
-        /// </summary>
-        public int CaptureInterval { get; set; }
+        private Rectangle _captureRegion;
+        private int _captureInterval = 1000;
 
         /// <summary>
         /// 屏幕捕获事件
         /// </summary>
-        public event EventHandler<ScreenCaptureEventArgs> ScreenCaptured;
+        public event EventHandler<ScreenCaptureEventArgs>? ScreenCaptured;
+
+        /// <summary>
+        /// 捕获区域
+        /// </summary>
+        public Rectangle CaptureRegion
+        {
+            get => _captureRegion;
+            set => _captureRegion = value;
+        }
+
+        /// <summary>
+        /// 捕获间隔(毫秒)
+        /// </summary>
+        public int CaptureInterval
+        {
+            get => _captureInterval;
+            set
+            {
+                if (value < 100)
+                    throw new ArgumentException("捕获间隔不能小于100毫秒");
+                _captureInterval = value;
+                if (_captureTimer != null)
+                    _captureTimer.Interval = value;
+            }
+        }
 
         /// <summary>
         /// 是否正在捕获
@@ -45,13 +68,13 @@ namespace EVEMonitor.Capture.Services
         /// <param name="logger">日志服务</param>
         /// <param name="captureRegion">捕获区域</param>
         /// <param name="captureInterval">捕获间隔(毫秒)</param>
-        public ScreenCaptureService(ILogger logger, Rectangle captureRegion, int captureInterval = 1000)
+        public ScreenCaptureService(ILogger<ScreenCaptureService> logger, Rectangle captureRegion, int captureInterval = 1000)
         {
             _logger = logger;
-            CaptureRegion = captureRegion;
-            CaptureInterval = captureInterval;
-            _captureTimer = new Timer { Interval = CaptureInterval };
-            _captureTimer.Tick += CaptureTimer_Tick;
+            _captureRegion = captureRegion;
+            _captureInterval = captureInterval;
+            _captureTimer = new Timer(CaptureInterval);
+            _captureTimer.Elapsed += CaptureTimer_Tick;
         }
 
         /// <summary>
@@ -63,8 +86,9 @@ namespace EVEMonitor.Capture.Services
                 return;
 
             _captureTimer.Interval = CaptureInterval;
-            _captureTimer.Start();
+            _captureTimer.Enabled = true;
             _isCapturing = true;
+            _logger.LogInformation("屏幕捕获服务已启动");
         }
 
         /// <summary>
@@ -75,8 +99,9 @@ namespace EVEMonitor.Capture.Services
             if (!_isCapturing)
                 return;
 
-            _captureTimer.Stop();
+            _captureTimer.Enabled = false;
             _isCapturing = false;
+            _logger.LogInformation("屏幕捕获服务已停止");
         }
 
         /// <summary>
@@ -88,7 +113,12 @@ namespace EVEMonitor.Capture.Services
             // 如果捕获区域无效，则捕获整个主屏幕
             if (CaptureRegion.Width <= 0 || CaptureRegion.Height <= 0)
             {
-                CaptureRegion = new Rectangle(0, 0, Screen.PrimaryScreen.Bounds.Width, Screen.PrimaryScreen.Bounds.Height);
+                var screen = Screen.PrimaryScreen;
+                if (screen == null)
+                {
+                    throw new InvalidOperationException("无法获取主屏幕信息");
+                }
+                CaptureRegion = screen.Bounds;
             }
 
             // 创建位图对象
@@ -100,11 +130,11 @@ namespace EVEMonitor.Capture.Services
                 using (Graphics graphics = Graphics.FromImage(bitmap))
                 {
                     graphics.CopyFromScreen(
-                        CaptureRegion.X, 
-                        CaptureRegion.Y, 
-                        0, 
-                        0, 
-                        CaptureRegion.Size, 
+                        CaptureRegion.X,
+                        CaptureRegion.Y,
+                        0,
+                        0,
+                        CaptureRegion.Size,
                         CopyPixelOperation.SourceCopy
                     );
                 }
@@ -113,9 +143,9 @@ namespace EVEMonitor.Capture.Services
             }
             catch (Exception ex)
             {
-                // 如果捕获失败，释放位图并返回null
+                // 如果捕获失败，释放位图并抛出异常
                 bitmap.Dispose();
-                Console.WriteLine($"捕获屏幕失败: {ex.Message}");
+                _logger.LogError(ex, "捕获屏幕失败");
                 throw;
             }
         }
@@ -123,7 +153,7 @@ namespace EVEMonitor.Capture.Services
         /// <summary>
         /// 定时器回调，执行屏幕捕获
         /// </summary>
-        private void CaptureTimer_Tick(object sender, EventArgs e)
+        private void CaptureTimer_Tick(object? sender, ElapsedEventArgs e)
         {
             try
             {
@@ -132,7 +162,7 @@ namespace EVEMonitor.Capture.Services
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"定时捕获失败: {ex.Message}");
+                _logger.LogError(ex, "定时捕获失败");
             }
         }
 
@@ -142,103 +172,100 @@ namespace EVEMonitor.Capture.Services
         /// <param name="screenshot">截图</param>
         protected virtual void OnScreenCaptured(Bitmap screenshot)
         {
-            ScreenCaptured?.Invoke(this, new ScreenCaptureEventArgs(screenshot));
+            // 捕获到截图后触发事件
+            if (ScreenCaptured != null && screenshot != null)
+            {
+                // 使用新版本的ScreenCaptureEventArgs类
+                var args = new ScreenCaptureEventArgs(screenshot)
+                {
+                    WindowHandle = IntPtr.Zero,
+                    CaptureTime = DateTime.Now
+                };
+                ScreenCaptured.Invoke(this, args);
+            }
         }
 
         /// <summary>
-        /// 捕获特定窗口的屏幕截图
+        /// 捕获指定窗口的屏幕
         /// </summary>
-        /// <param name="windowHandle">窗口句柄</param>
-        /// <param name="cropRect">裁剪区域，为null则不裁剪</param>
-        /// <returns>捕获的位图</returns>
-        public async Task<Bitmap> CaptureWindowAsync(IntPtr windowHandle, Rectangle? cropRect = null)
+        /// <param name="windowTitle">窗口标题</param>
+        /// <returns>截图</returns>
+        public async Task<Bitmap?> CaptureWindowAsync(string windowTitle)
         {
-            return await Task.Run(() =>
+            try
             {
-                try
+                return await Task.Run(() =>
                 {
-                    if (windowHandle == IntPtr.Zero)
+                    var handle = FindWindow(string.Empty, windowTitle);
+                    if (handle == IntPtr.Zero)
                     {
-                        _logger?.LogWarning("无效的窗口句柄");
+                        _logger.LogWarning("未找到窗口：{WindowTitle}", windowTitle);
                         return null;
                     }
 
-                    // 获取窗口尺寸
-                    if (!GetWindowRect(windowHandle, out RECT windowRect))
-                    {
-                        _logger?.LogError($"无法获取窗口矩形区域，错误代码：{Marshal.GetLastWin32Error()}");
-                        return null;
-                    }
+                    return CaptureWindowByHandle(handle);
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "捕获窗口截图时发生错误：{WindowTitle}", windowTitle);
+                return null;
+            }
+        }
 
-                    int width = windowRect.Right - windowRect.Left;
-                    int height = windowRect.Bottom - windowRect.Top;
+        /// <summary>
+        /// 捕获指定窗口的屏幕
+        /// </summary>
+        /// <param name="handle">窗口句柄</param>
+        /// <returns>截图</returns>
+        public async Task<Bitmap?> CaptureWindowAsync(IntPtr handle)
+        {
+            try
+            {
+                return await Task.Run(() => CaptureWindowByHandle(handle));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "捕获窗口截图时发生错误：{Handle}", handle);
+                return null;
+            }
+        }
 
-                    if (width <= 0 || height <= 0)
-                    {
-                        _logger?.LogWarning($"窗口尺寸无效：{width}x{height}");
-                        return null;
-                    }
+        private Bitmap? CaptureWindowByHandle(IntPtr handle)
+        {
+            if (handle == IntPtr.Zero)
+            {
+                _logger.LogWarning("无效的窗口句柄");
+                return null;
+            }
 
-                    // 创建位图
-                    Bitmap bitmap = new Bitmap(width, height);
+            // 获取窗口位置和大小
+            GetWindowRect(handle, out RECT rect);
+            var width = rect.Right - rect.Left;
+            var height = rect.Bottom - rect.Top;
 
-                    using (Graphics graphics = Graphics.FromImage(bitmap))
-                    {
-                        // 设置图形质量
-                        graphics.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
-                        graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-                        graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
+            if (width <= 0 || height <= 0)
+            {
+                _logger.LogWarning("窗口大小无效：{Handle}", handle);
+                return null;
+            }
 
-                        // 复制窗口内容到位图
-                        graphics.CopyFromScreen(
-                            windowRect.Left,
-                            windowRect.Top,
-                            0,
-                            0,
-                            new Size(width, height),
-                            CopyPixelOperation.SourceCopy);
-                    }
+            // 创建截图
+            var bitmap = new Bitmap(width, height, PixelFormat.Format32bppArgb);
+            using (var graphics = Graphics.FromImage(bitmap))
+            {
+                graphics.CopyFromScreen(rect.Left, rect.Top, 0, 0, new Size(width, height), CopyPixelOperation.SourceCopy);
+            }
 
-                    // 如果需要裁剪
-                    if (cropRect.HasValue)
-                    {
-                        Rectangle crop = cropRect.Value;
-                        
-                        // 确保裁剪区域在位图范围内
-                        if (crop.X >= 0 && crop.Y >= 0 && crop.Width > 0 && crop.Height > 0 &&
-                            crop.X + crop.Width <= bitmap.Width && crop.Y + crop.Height <= bitmap.Height)
-                        {
-                            Bitmap croppedBitmap = new Bitmap(crop.Width, crop.Height);
-                            using (Graphics g = Graphics.FromImage(croppedBitmap))
-                            {
-                                g.DrawImage(bitmap, new Rectangle(0, 0, crop.Width, crop.Height),
-                                    crop, GraphicsUnit.Pixel);
-                            }
-                            bitmap.Dispose();
-                            bitmap = croppedBitmap;
-                        }
-                        else
-                        {
-                            _logger?.LogWarning($"裁剪区域超出位图范围：位图={bitmap.Width}x{bitmap.Height}，裁剪={crop}");
-                        }
-                    }
+            // 触发事件
+            var args = new ScreenCaptureEventArgs(bitmap)
+            {
+                WindowHandle = handle,
+                CaptureTime = DateTime.Now
+            };
+            ScreenCaptured?.Invoke(this, args);
 
-                    // 触发事件
-                    ScreenCaptured?.Invoke(this, new ScreenCaptureEventArgs
-                    {
-                        WindowHandle = windowHandle,
-                        CapturedImage = bitmap,
-                        CaptureTime = DateTime.Now
-                    });
-
-                    return bitmap;
-                }
-                catch (Exception ex)
-                {
-                    _logger?.LogError($"屏幕捕获异常：{ex.Message}");
-                    return null;
-                }
-            });
+            return bitmap;
         }
 
         /// <summary>
@@ -247,21 +274,27 @@ namespace EVEMonitor.Capture.Services
         /// <param name="windowHandles">窗口句柄集合</param>
         /// <param name="cropRects">裁剪区域集合，可为null</param>
         /// <returns>捕获的位图集合</returns>
-        public async Task<Dictionary<IntPtr, Bitmap>> CaptureWindowsAsync(IEnumerable<IntPtr> windowHandles, Dictionary<IntPtr, Rectangle> cropRects = null)
+        public async Task<Dictionary<IntPtr, Bitmap>> CaptureWindowsAsync(IEnumerable<IntPtr> windowHandles, Dictionary<IntPtr, Rectangle>? cropRects = null)
         {
             Dictionary<IntPtr, Bitmap> results = new Dictionary<IntPtr, Bitmap>();
 
             foreach (var handle in windowHandles)
             {
-                Rectangle? cropRect = null;
-                if (cropRects != null && cropRects.TryGetValue(handle, out Rectangle rect))
-                {
-                    cropRect = rect;
-                }
-
-                var bitmap = await CaptureWindowAsync(handle, cropRect);
+                var bitmap = await CaptureWindowAsync(handle);
                 if (bitmap != null)
                 {
+                    if (cropRects != null && cropRects.TryGetValue(handle, out var cropRect))
+                    {
+                        // 如果有裁剪区域，则裁剪图像
+                        var croppedBitmap = new Bitmap(cropRect.Width, cropRect.Height);
+                        using (var graphics = Graphics.FromImage(croppedBitmap))
+                        {
+                            graphics.DrawImage(bitmap, new Rectangle(0, 0, cropRect.Width, cropRect.Height),
+                                cropRect, GraphicsUnit.Pixel);
+                        }
+                        bitmap.Dispose();
+                        bitmap = croppedBitmap;
+                    }
                     results[handle] = bitmap;
                 }
             }
@@ -273,7 +306,7 @@ namespace EVEMonitor.Capture.Services
         /// 捕获整个屏幕的截图
         /// </summary>
         /// <returns>捕获的位图</returns>
-        public async Task<Bitmap> CaptureScreenAsync()
+        public async Task<Bitmap?> CaptureScreenAsync()
         {
             return await Task.Run(() =>
             {
@@ -303,13 +336,14 @@ namespace EVEMonitor.Capture.Services
                             CopyPixelOperation.SourceCopy);
                     }
 
-                    // 触发事件
-                    ScreenCaptured?.Invoke(this, new ScreenCaptureEventArgs
+                    // 使用新版本的ScreenCaptureEventArgs类
+                    var args = new ScreenCaptureEventArgs(bitmap)
                     {
-                        WindowHandle = IntPtr.Zero, // 表示全屏
+                        WindowHandle = IntPtr.Zero,
                         CapturedImage = bitmap,
                         CaptureTime = DateTime.Now
-                    });
+                    };
+                    ScreenCaptured?.Invoke(this, args);
 
                     return bitmap;
                 }
@@ -336,7 +370,7 @@ namespace EVEMonitor.Capture.Services
 
             try
             {
-                IntPtr handle = FindWindow(null, windowTitle);
+                IntPtr handle = FindWindow(string.Empty, windowTitle);
                 if (handle == IntPtr.Zero)
                 {
                     _logger?.LogWarning($"未找到标题为'{windowTitle}'的窗口");
@@ -355,35 +389,20 @@ namespace EVEMonitor.Capture.Services
         /// </summary>
         public void Dispose()
         {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        /// <summary>
-        /// 释放资源
-        /// </summary>
-        /// <param name="disposing">是否释放托管资源</param>
-        protected virtual void Dispose(bool disposing)
-        {
-            if (_disposed)
-                return;
-
-            if (disposing)
+            if (!_disposed)
             {
-                Stop();
-                _captureTimer.Dispose();
+                _captureTimer?.Dispose();
+                _disposed = true;
             }
-
-            _disposed = true;
         }
 
         #region Win32 API
 
         [DllImport("user32.dll", SetLastError = true)]
-        private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
-
-        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
         private static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool GetWindowRect(IntPtr hwnd, out RECT lpRect);
 
         [DllImport("user32.dll")]
         private static extern int GetSystemMetrics(int nIndex);
@@ -406,5 +425,42 @@ namespace EVEMonitor.Capture.Services
         }
 
         #endregion
+
+        private Bitmap? CaptureWindow(IntPtr hWnd)
+        {
+            try
+            {
+                if (!GetWindowRect(hWnd, out RECT rect))
+                {
+                    _logger.LogWarning("获取窗口位置失败");
+                    return null;
+                }
+
+                int width = rect.Right - rect.Left;
+                int height = rect.Bottom - rect.Top;
+
+                if (width <= 0 || height <= 0)
+                {
+                    _logger.LogWarning("窗口大小无效：width={Width}, height={Height}", width, height);
+                    return null;
+                }
+
+                var bitmap = new Bitmap(width, height);
+                using var graphics = Graphics.FromImage(bitmap);
+                graphics.CopyFromScreen(rect.Left, rect.Top, 0, 0, new Size(width, height));
+
+                return bitmap;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "截图过程中发生错误");
+                return null;
+            }
+        }
+
+        private IntPtr FindEmulatorWindow(string windowTitle)
+        {
+            return FindWindow(string.Empty, windowTitle);
+        }
     }
-} 
+}

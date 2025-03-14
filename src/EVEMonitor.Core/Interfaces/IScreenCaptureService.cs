@@ -1,4 +1,6 @@
+using System;
 using System.Drawing;
+using System.Threading.Tasks;
 
 namespace EVEMonitor.Core.Interfaces
 {
@@ -13,12 +15,28 @@ namespace EVEMonitor.Core.Interfaces
         public Bitmap Screenshot { get; }
 
         /// <summary>
+        /// 窗口句柄
+        /// </summary>
+        public IntPtr WindowHandle { get; set; } = IntPtr.Zero;
+
+        /// <summary>
+        /// 捕获的图像
+        /// </summary>
+        public Bitmap CapturedImage { get; set; }
+
+        /// <summary>
+        /// 捕获时间
+        /// </summary>
+        public DateTime CaptureTime { get; set; } = DateTime.Now;
+
+        /// <summary>
         /// 初始化屏幕捕获事件参数
         /// </summary>
         /// <param name="screenshot">截图</param>
         public ScreenCaptureEventArgs(Bitmap screenshot)
         {
             Screenshot = screenshot;
+            CapturedImage = screenshot;
         }
     }
 
@@ -62,5 +80,12 @@ namespace EVEMonitor.Core.Interfaces
         /// </summary>
         /// <returns>捕获的截图</returns>
         Bitmap CaptureFrame();
+
+        /// <summary>
+        /// 异步捕获指定窗口的屏幕
+        /// </summary>
+        /// <param name="windowTitle">窗口标题</param>
+        /// <returns>截图</returns>
+        Task<Bitmap?> CaptureWindowAsync(string windowTitle);
     }
-} 
+}

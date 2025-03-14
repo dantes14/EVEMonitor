@@ -1,0 +1,76 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "EVEMonitor.UI - 启动",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/src/EVEMonitor.UI/bin/Debug/net9.0-windows/EVEMonitor.UI.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/EVEMonitor.UI",
+            "stopAtEntry": false,
+            "console": "internalConsole",
+            "internalConsoleOptions": "openOnSessionStart"
+        },
+        {
+            "name": "EVEMonitor - 运行测试",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build-tests",
+            "program": "dotnet",
+            "args": [
+                "test",
+                "${workspaceFolder}/tests"
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "internalConsole",
+            "internalConsoleOptions": "openOnSessionStart"
+        },
+        {
+            "name": "EVEMonitor.Core.Tests - 运行核心测试",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build-core-tests",
+            "program": "dotnet",
+            "args": [
+                "test",
+                "${workspaceFolder}/tests/EVEMonitor.Core.Tests"
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "internalConsole",
+            "internalConsoleOptions": "openOnSessionStart"
+        },
+        {
+            "name": "EVEMonitor.OCR.Tests - 运行OCR测试",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build-ocr-tests",
+            "program": "dotnet",
+            "args": [
+                "test",
+                "${workspaceFolder}/tests/EVEMonitor.OCR.Tests"
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "internalConsole",
+            "internalConsoleOptions": "openOnSessionStart"
+        },
+        {
+            "name": "EVEMonitor.ImageProcessing.Tests - 运行图像处理测试",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build-image-tests",
+            "program": "dotnet",
+            "args": [
+                "test",
+                "${workspaceFolder}/tests/EVEMonitor.ImageProcessing.Tests"
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "internalConsole",
+            "internalConsoleOptions": "openOnSessionStart"
+        }
+    ]
+}

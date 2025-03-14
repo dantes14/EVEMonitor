@@ -1,0 +1,93 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build",
+            "command": "dotnet",
+            "type": "shell",
+            "args": [
+                "build",
+                "${workspaceFolder}/src/EVEMonitor.UI/EVEMonitor.UI.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "build-tests",
+            "command": "dotnet",
+            "type": "shell",
+            "args": [
+                "build",
+                "${workspaceFolder}/tests",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "build-core-tests",
+            "command": "dotnet",
+            "type": "shell",
+            "args": [
+                "build",
+                "${workspaceFolder}/tests/EVEMonitor.Core.Tests/EVEMonitor.Core.Tests.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "build-ocr-tests",
+            "command": "dotnet",
+            "type": "shell",
+            "args": [
+                "build",
+                "${workspaceFolder}/tests/EVEMonitor.OCR.Tests/EVEMonitor.OCR.Tests.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "build-image-tests",
+            "command": "dotnet",
+            "type": "shell",
+            "args": [
+                "build",
+                "${workspaceFolder}/tests/EVEMonitor.ImageProcessing.Tests/EVEMonitor.ImageProcessing.Tests.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "publish",
+            "command": "dotnet",
+            "type": "shell",
+            "args": [
+                "publish",
+                "${workspaceFolder}/src/EVEMonitor.UI/EVEMonitor.UI.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "watch",
+            "command": "dotnet",
+            "type": "shell",
+            "args": [
+                "watch",
+                "run",
+                "--project",
+                "${workspaceFolder}/src/EVEMonitor.UI/EVEMonitor.UI.csproj"
+            ],
+            "problemMatcher": "$msCompile"
+        }
+    ]
+}

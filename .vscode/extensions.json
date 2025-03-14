@@ -1,0 +1,14 @@
+{
+    "recommendations": [
+        "ms-dotnettools.csharp",
+        "formulahendry.dotnet-test-explorer",
+        "jmrog.vscode-nuget-package-manager",
+        "fernandoescolar.vscode-solution-explorer",
+        "doggy8088.netcore-snippets",
+        "DotJoshJohnson.xml",
+        "streetsidesoftware.code-spell-checker",
+        "Fudge.auto-using",
+        "alexcvzz.vscode-sqlite",
+        "tintoy.msbuild-project-tools"
+    ]
+}

@@ -9,21 +9,26 @@ namespace EVEMonitor.Core.Models
         /// 模拟器索引
         /// </summary>
         public int EmulatorIndex { get; set; }
-        
+
         /// <summary>
         /// 星系名称
         /// </summary>
         public string SystemName { get; set; } = string.Empty;
-        
+
         /// <summary>
         /// 舰船信息列表
         /// </summary>
         public List<ShipInfo> Ships { get; set; } = new List<ShipInfo>();
-        
+
         /// <summary>
         /// 识别时间戳
         /// </summary>
         public DateTime Timestamp { get; set; } = DateTime.Now;
+
+        /// <summary>
+        /// 是否包含危险舰船
+        /// </summary>
+        public bool ContainsDangerousShips { get; set; }
 
         /// <summary>
         /// 检查是否有舰船数据
@@ -42,12 +47,12 @@ namespace EVEMonitor.Core.Models
         {
             return new AlertData
             {
-                Type = AlertType.Ship,
+                AlertType = AlertType.Ship,
                 EmulatorIndex = EmulatorIndex,
                 SystemName = SystemName,
-                Ships = Ships,
+                RelatedShips = Ships,
                 Timestamp = DateTime.Now
             };
         }
     }
-} 
+}

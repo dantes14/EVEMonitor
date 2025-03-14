@@ -58,9 +58,9 @@ namespace EVEMonitor.Alert.Services
 
             var alertData = new AlertData
             {
-                Type = AlertType.Danger,
+                AlertType = AlertType.Danger,
                 Title = $"危险舰船警报 - {systemName}",
-                Content = $"在星系 {systemName} 中检测到 {dangerousShips.Count} 艘危险舰船",
+                Message = $"在星系 {systemName} 中检测到 {dangerousShips.Count} 艘危险舰船",
                 EmulatorIndex = emulatorIndex,
                 SystemName = systemName,
                 RelatedShips = dangerousShips,
@@ -86,9 +86,9 @@ namespace EVEMonitor.Alert.Services
 
             var alertData = new AlertData
             {
-                Type = AlertType.Performance,
+                AlertType = AlertType.Performance,
                 Title = "性能警报",
-                Content = $"{message} (处理时间: {processingTime.TotalMilliseconds:F2}ms)",
+                Message = $"{message} (处理时间: {processingTime.TotalMilliseconds:F2}ms)",
                 EmulatorIndex = -1,
             };
 
@@ -108,7 +108,7 @@ namespace EVEMonitor.Alert.Services
             try
             {
                 string url = WebhookUrl;
-                
+
                 // 如果有密钥，则生成签名
                 if (!string.IsNullOrEmpty(_secret))
                 {
@@ -183,4 +183,4 @@ namespace EVEMonitor.Alert.Services
             }
         }
     }
-} 
+}
